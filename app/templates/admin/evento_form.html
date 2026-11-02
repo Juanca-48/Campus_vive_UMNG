@@ -1,0 +1,53 @@
+{% extends "admin/_layout.html" %}
+{% set seccion = "admin.eventos" %}
+{% macro v(campo, valor) %}{{ form.get(campo, valor if valor is not none else "") }}{% endmacro %}
+
+{% block panel %}
+<a class="cv-link d-inline-block mb-3" href="{{ url_for('admin.eventos') }}"><i class="bi bi-arrow-left"></i> Volver al calendario</a>
+<h2 class="h5 mb-3">{{ "Editar evento" if evento.id else "Nuevo evento" }}</h2>
+
+<form method="post" class="cv-card p-4">
+  <div class="row g-3">
+    <div class="col-md-8">
+      <label class="form-label" for="nombre">Nombre *</label>
+      <input class="form-control cv-input" id="nombre" name="nombre" required maxlength="120" value="{{ v('nombre', evento.nombre) }}">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label" for="lugar">Lugar *</label>
+      <input class="form-control cv-input" id="lugar" name="lugar" required maxlength="120" value="{{ v('lugar', evento.lugar) }}">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label" for="fecha">Fecha *</label>
+      <input class="form-control cv-input" id="fecha" name="fecha" type="date" required
+             value="{{ v('fecha', evento.fecha.isoformat() if evento.fecha) }}">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label" for="hora">Hora *</label>
+      <input class="form-control cv-input" id="hora" name="hora" type="time" required
+             value="{{ v('hora', evento.hora.strftime('%H:%M') if evento.hora) }}">
+    </div>
+    <div class="col-md-6">
+      <label class="form-label" for="actividad_id">Actividad relacionada</label>
+      <select class="form-select cv-input" id="actividad_id" name="actividad_id">
+        <option value="">Ninguna (evento general)</option>
+        {% for a in actividades %}
+          <option value="{{ a.id }}" {{ 'selected' if v('actividad_id', evento.actividad_id) == a.id|string }}>{{ a.nombre }}</option>
+        {% endfor %}
+      </select>
+      <div class="form-text">Si eliges una actividad, el evento toma su categoría.</div>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label" for="categoria">Categoría (eventos generales)</label>
+      <select class="form-select cv-input" id="categoria" name="categoria">
+        {% for cat in categorias %}
+          <option value="{{ cat.slug }}" {{ 'selected' if v('categoria', evento.categoria) == cat.slug }}>{{ cat.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+  <div class="mt-4 d-flex gap-2">
+    <button class="btn cv-btn-primary">Guardar</button>
+    <a class="btn btn-outline-light" href="{{ url_for('admin.eventos') }}">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

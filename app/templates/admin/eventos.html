@@ -1,0 +1,35 @@
+{% extends "admin/_layout.html" %}
+{% set seccion = "admin.eventos" %}
+
+{% block panel %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="h5 mb-0">Calendario ({{ eventos|length }} eventos)</h2>
+  <a class="btn cv-btn-primary" href="{{ url_for('admin.evento_form') }}"><i class="bi bi-plus-lg"></i> Nuevo evento</a>
+</div>
+<div class="cv-card p-0 overflow-hidden">
+  <div class="table-responsive">
+    <table class="table cv-table mb-0 align-middle">
+      <thead><tr><th>Fecha</th><th>Evento</th><th>Lugar</th><th>Actividad</th><th></th></tr></thead>
+      <tbody>
+        {% for ev in eventos %}
+          <tr>
+            <td class="text-nowrap">{{ ev.fecha.strftime("%d/%m/%Y") }} · {{ ev.hora|hora }}</td>
+            <td>{{ ev.nombre }} <span class="cv-chip cv-bg-{{ ev.cat.color }} ms-1">{{ ev.cat.nombre }}</span></td>
+            <td>{{ ev.lugar }}</td>
+            <td>{{ ev.actividad.nombre if ev.actividad else "—" }}</td>
+            <td class="text-end text-nowrap">
+              <a class="btn btn-sm btn-outline-light" href="{{ url_for('admin.evento_form', evento_id=ev.id) }}" aria-label="Editar {{ ev.nombre }}"><i class="bi bi-pencil"></i></a>
+              <form method="post" action="{{ url_for('admin.evento_eliminar', evento_id=ev.id) }}" class="d-inline"
+                    onsubmit="return confirm('¿Eliminar {{ ev.nombre|e }} del calendario?')">
+                <button class="btn btn-sm btn-outline-danger" aria-label="Eliminar {{ ev.nombre }}"><i class="bi bi-trash"></i></button>
+              </form>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5" class="text-center cv-muted py-4">No hay eventos en el calendario.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

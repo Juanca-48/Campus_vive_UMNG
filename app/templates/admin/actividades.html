@@ -1,0 +1,42 @@
+{% extends "admin/_layout.html" %}
+{% set seccion = "admin.actividades" %}
+
+{% block panel %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="h5 mb-0">Actividades ({{ actividades|length }})</h2>
+  <a class="btn cv-btn-primary" href="{{ url_for('admin.actividad_form') }}"><i class="bi bi-plus-lg"></i> Nueva actividad</a>
+</div>
+<div class="cv-card p-0 overflow-hidden">
+  <div class="table-responsive">
+    <table class="table cv-table mb-0 align-middle">
+      <thead>
+        <tr><th>Actividad</th><th>Categoría</th><th>Responsable</th><th>Lugar</th>
+            <th class="text-end">Inscritos</th><th class="text-end">Cupos libres</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for act in actividades %}
+          <tr>
+            <td><a href="{{ url_for('main.actividad', slug=act.slug) }}">{{ act.nombre }}</a>
+                {% if act.destacada %}<i class="bi bi-star-fill text-cv-yellow" title="Destacada"></i>{% endif %}</td>
+            <td><span class="cv-chip cv-bg-{{ act.cat.color }}">{{ act.cat.nombre }}</span></td>
+            <td>{{ act.responsable }}</td>
+            <td>{{ act.ubicacion.nombre }}</td>
+            <td class="text-end">{{ act.miembros }}{% if act.pendientes %} <small class="text-cv-yellow">+{{ act.pendientes }} pend.</small>{% endif %}</td>
+            <td class="text-end">{{ act.cupos_disponibles }} / {{ act.cupos_total }}</td>
+            <td class="text-end text-nowrap">
+              <a class="btn btn-sm cv-btn-outline" href="{{ url_for('admin.inscritos', actividad_id=act.id) }}"><i class="bi bi-people"></i> Inscritos</a>
+              <a class="btn btn-sm btn-outline-light" href="{{ url_for('admin.actividad_form', actividad_id=act.id) }}" aria-label="Editar {{ act.nombre }}"><i class="bi bi-pencil"></i></a>
+              <form method="post" action="{{ url_for('admin.actividad_eliminar', actividad_id=act.id) }}" class="d-inline"
+                    onsubmit="return confirm('¿Eliminar {{ act.nombre|e }} y todas sus inscripciones?')">
+                <button class="btn btn-sm btn-outline-danger" aria-label="Eliminar {{ act.nombre }}"><i class="bi bi-trash"></i></button>
+              </form>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="7" class="text-center cv-muted py-4">No hay actividades. Crea la primera.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

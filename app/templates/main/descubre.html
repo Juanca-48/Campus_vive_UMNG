@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import tarjeta_grupo, titulo_seccion %}
+{% block title %}Descubre{% endblock %}
+
+{% block content %}
+{{ titulo_seccion("bi-people", "Descubre", "grupos",
+                  "Explora todos los grupos y actividades extracurriculares de la UMNG.") }}
+
+<div class="row g-4">
+  <aside class="col-lg-3">
+    <div class="cv-sidebar">
+      <nav class="cv-filter" aria-label="Categorías">
+        <button class="cv-filter__item {{ 'is-active' if categoria_activa == 'todos' }}" data-filtro-cat="todos">
+          <i class="bi bi-grid"></i> Todos
+        </button>
+        {% for cat in categorias %}
+          <button class="cv-filter__item {{ 'is-active' if categoria_activa == cat.slug }}" data-filtro-cat="{{ cat.slug }}">
+            <i class="bi {{ cat.icono }} text-cv-{{ cat.color }}"></i> {{ cat.nombre }}
+          </button>
+        {% endfor %}
+      </nav>
+      <hr>
+      <label class="form-label small" for="filtroTexto">Buscar</label>
+      <input class="form-control cv-input" id="filtroTexto" type="search" placeholder="Ej. guitarra, fútbol…">
+    </div>
+  </aside>
+
+  <section class="col-lg-9">
+    <p class="cv-muted small mb-3"><span id="contador">{{ actividades|length }}</span> actividades encontradas</p>
+    <div class="row g-3" id="listaActividades">
+      {% for act in actividades %}
+        <div class="col-12 col-sm-6 col-xl-4" data-item>{{ tarjeta_grupo(act) }}</div>
+      {% endfor %}
+    </div>
+    <div class="cv-empty d-none" id="sinResultados">
+      <i class="bi bi-search"></i>
+      <p>No encontramos actividades con esos filtros.</p>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/descubre.js') }}"></script>
+{% endblock %}

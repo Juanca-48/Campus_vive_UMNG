@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block body_class %}cv-onboarding{% endblock %}
+{% block navbar %}{% endblock %}
+{% block main_class %}cv-stage cv-stage--auth{% endblock %}
+
+{% block content %}
+{% include "partials/_brushes.html" %}
+<div class="cv-umng">
+  <i class="bi bi-shield-fill-check"></i>
+  <span>UNIVERSIDAD MILITAR<br>NUEVA GRANADA</span>
+</div>
+
+<div class="cv-auth">
+  {% with clase="cv-brand--lg" %}{% include "partials/_brand.html" %}{% endwith %}
+  <p class="cv-auth__tagline">Encuentra <span class="text-cv-pink">tu lugar</span> en la universidad</p>
+  {% block form %}{% endblock %}
+</div>
+{% endblock %}

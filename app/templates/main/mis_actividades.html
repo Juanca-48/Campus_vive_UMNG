@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import thumb, titulo_seccion %}
+{% block title %}Mis actividades{% endblock %}
+
+{% block content %}
+{{ titulo_seccion("bi-clipboard-check", "Mis", "actividades", "Sigue el estado de tus solicitudes de inscripción.") }}
+
+{% if inscripciones %}
+  <div class="row g-3">
+    {% for ins in inscripciones %}
+      <div class="col-12 col-md-6 col-xl-4">
+        <article class="cv-card h-100">
+          {{ thumb(ins.act, "110px") }}
+          <div class="cv-card__body">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+              <h3 class="cv-card__title"><a href="{{ url_for('main.actividad', slug=ins.act.slug) }}">{{ ins.act.nombre }}</a></h3>
+              <span class="cv-status cv-status--{{ ins.estado|lower }}">{{ ins.estado }}</span>
+            </div>
+            <p class="cv-meta-line"><i class="bi bi-calendar3"></i> {{ ins.act.horario|join(" · ") }}</p>
+            <p class="cv-meta-line"><i class="bi bi-geo-alt"></i> {{ ins.act.ubicacion.nombre }}</p>
+            <form method="post" action="{{ url_for('main.cancelar', actividad_id=ins.actividad_id) }}" class="mt-2">
+              <button class="btn btn-sm cv-btn-outline">Cancelar solicitud</button>
+            </form>
+          </div>
+        </article>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="cv-empty">
+    <i class="bi bi-clipboard"></i>
+    <p>Aún no te has inscrito en ninguna actividad.</p>
+    <a class="btn cv-btn-primary" href="{{ url_for('main.descubre') }}">Descubrir actividades</a>
+  </div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends "auth/_layout.html" %}
+{% block title %}Ingresar{% endblock %}
+
+{% block form %}
+<form method="post" class="cv-auth__card">
+  <h1 class="h4 mb-3">Inicia sesión</h1>
+  <input type="hidden" name="next" value="{{ next }}">
+  <div class="mb-3">
+    <label class="form-label" for="correo">Correo institucional</label>
+    <input class="form-control cv-input-light" id="correo" name="correo" type="email" required autofocus
+           value="{{ correo }}" placeholder="nombre.apellido@unimilitar.edu.co" autocomplete="email">
+  </div>
+  <div class="mb-4">
+    <label class="form-label" for="clave">Contraseña</label>
+    <input class="form-control cv-input-light" id="clave" name="clave" type="password" required
+           autocomplete="current-password">
+  </div>
+  <button class="btn cv-btn-primary w-100">Ingresar <i class="bi bi-arrow-right"></i></button>
+  <p class="mt-3 mb-0 text-center">¿Primera vez aquí? <a class="cv-link" href="{{ url_for('auth.registro') }}">Crea tu cuenta</a></p>
+</form>
+{% endblock %}

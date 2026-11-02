@@ -1,0 +1,43 @@
+{% extends "admin/_layout.html" %}
+{% set seccion = "admin.actividades" %}
+
+{% block panel %}
+<a class="cv-link d-inline-block mb-3" href="{{ url_for('admin.actividades') }}"><i class="bi bi-arrow-left"></i> Volver a actividades</a>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <h2 class="h5 mb-0">Inscritos en {{ actividad.nombre }}</h2>
+  <span class="cv-muted">{{ info.miembros }} aprobados · {{ info.pendientes }} pendientes · {{ info.cupos_disponibles }} / {{ info.cupos_total }} cupos libres</span>
+</div>
+
+<form method="post" class="cv-card p-3 mb-4 d-flex flex-wrap gap-2 align-items-end">
+  <div class="flex-grow-1">
+    <label class="form-label small" for="usuario_id">Agregar estudiante</label>
+    <select class="form-select cv-input" id="usuario_id" name="usuario_id" required {{ 'disabled' if not disponibles }}>
+      <option value="">{{ "Selecciona un estudiante…" if disponibles else "Todos los estudiantes ya están inscritos" }}</option>
+      {% for u in disponibles %}<option value="{{ u.id }}">{{ u.nombre }} — {{ u.correo }}</option>{% endfor %}
+    </select>
+  </div>
+  <button class="btn cv-btn-primary" {{ 'disabled' if not disponibles }}><i class="bi bi-person-plus"></i> Agregar</button>
+</form>
+
+<div class="cv-card p-0 overflow-hidden">
+  <div class="table-responsive">
+    <table class="table cv-table mb-0 align-middle">
+      <thead><tr><th>Estudiante</th><th>Desde</th><th>Estado</th><th class="text-end">Acciones</th></tr></thead>
+      <tbody>
+        {% for ins in inscripciones %}
+          <tr>
+            <td>{{ ins.usuario.nombre }}<br><small class="cv-muted">{{ ins.usuario.correo }}</small></td>
+            <td>{{ ins.creada_en|local("%d/%m/%Y") }}</td>
+            <td><span class="cv-status cv-status--{{ ins.estado|lower }}">{{ ins.estado }}</span></td>
+            <td class="text-end text-nowrap">
+              {% with volver=request.path %}{% include "admin/_estado_botones.html" %}{% endwith %}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4" class="text-center cv-muted py-4">Nadie inscrito todavía.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import titulo_seccion %}
+{% block title %}Personaliza{% endblock %}
+
+{% block content %}
+{{ titulo_seccion("bi-sliders", "Personaliza", "tu experiencia",
+                  "Selecciona tus intereses para mostrarte lo que <span class='text-cv-pink'>más te importa</span>.") }}
+<form method="post" class="text-center">
+  <div class="cv-interests">
+    {% for cat in categorias %}
+      <label class="cv-interest cv-interest--{{ cat.color }}">
+        <input type="checkbox" name="intereses" value="{{ cat.slug }}" class="visually-hidden"
+               {{ 'checked' if cat.slug in intereses }}>
+        <span class="cv-interest__blob cv-bg-{{ cat.color }}"><i class="bi {{ cat.icono }}"></i></span>
+        <span class="cv-interest__name">{{ cat.nombre }}</span>
+        <span class="cv-interest__check"><i class="bi bi-check-lg"></i></span>
+      </label>
+    {% endfor %}
+  </div>
+  <button class="btn cv-btn-primary cv-btn-wide">Guardar intereses <i class="bi bi-arrow-right"></i></button>
+</form>
+{% endblock %}

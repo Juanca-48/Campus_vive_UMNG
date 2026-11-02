@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Panel Bienestar{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+  <h1 class="h3 mb-0">Panel de Bienestar Universitario</h1>
+  <p class="cv-muted mb-0">Gestiona actividades, calendario, inscritos y usuarios.</p>
+</div>
+
+{% set pestanas = [
+  ("admin.panel", "bi-speedometer2", "Resumen"),
+  ("admin.actividades", "bi-grid", "Actividades"),
+  ("admin.eventos", "bi-calendar-event", "Calendario"),
+  ("admin.usuarios", "bi-people", "Usuarios"),
+] %}
+<nav class="cv-filter cv-admin-tabs mb-4" aria-label="Secciones del panel">
+  {% for endpoint, icono, texto in pestanas %}
+    <a class="cv-filter__item {{ 'is-active' if seccion == endpoint }}" href="{{ url_for(endpoint) }}"
+       {% if seccion == endpoint %}aria-current="page"{% endif %}>
+      <i class="bi {{ icono }}"></i> {{ texto }}
+    </a>
+  {% endfor %}
+</nav>
+
+{% block panel %}{% endblock %}
+{% endblock %}

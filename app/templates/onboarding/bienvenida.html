@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import tarjeta_grupo, titulo_seccion %}
+{% block title %}Bienvenida{% endblock %}
+{% block body_class %}cv-onboarding{% endblock %}
+{% block navbar %}{% endblock %}
+{% block main_class %}cv-stage{% endblock %}
+
+{% block content %}
+{% include "partials/_brushes.html" %}
+
+<div class="cv-umng">
+  <i class="bi bi-shield-fill-check"></i>
+  <span>UNIVERSIDAD MILITAR<br>NUEVA GRANADA</span>
+</div>
+{% with clase="cv-brand--corner" %}{% include "partials/_brand.html" %}{% endwith %}
+
+<form method="post" class="cv-steps" id="onboarding">
+  <input type="hidden" name="next" value="">
+  {# Paso 1 · Bienvenida #}
+  <section class="cv-step is-active" data-step="0" aria-label="Bienvenida">
+    <div class="cv-arches">
+      <div class="cv-arch cv-bg-pink"><i class="bi bi-emoji-laughing"></i></div>
+      <div class="cv-arch cv-arch--tall cv-bg-yellow"><i class="bi bi-dribbble"></i></div>
+      <div class="cv-arch cv-bg-blue"><i class="bi bi-music-note-beamed"></i></div>
+    </div>
+    <div class="cv-hello">
+      <h1>¡Hola! <span aria-hidden="true">👋</span></h1>
+      <p>Cuéntanos qué te apasiona<br>y te mostraremos lo que la UMNG tiene para ti.</p>
+      <button type="button" class="btn cv-btn-primary cv-btn-wide" data-next>
+        Comenzar <i class="bi bi-arrow-right"></i>
+      </button>
+    </div>
+  </section>
+
+  {# Paso 2 · Intereses #}
+  <section class="cv-step" data-step="1" aria-label="Personaliza tu experiencia">
+    {{ titulo_seccion("bi-sliders", "Personaliza", "tu experiencia",
+                      "Selecciona tus intereses para mostrarte<br>lo que <span class='text-cv-pink'>más te importa</span>.") }}
+    <div class="cv-interests">
+      {% for cat in categorias %}
+        <label class="cv-interest cv-interest--{{ cat.color }}">
+          <input type="checkbox" name="intereses" value="{{ cat.slug }}" class="visually-hidden">
+          <span class="cv-interest__blob cv-bg-{{ cat.color }}"><i class="bi {{ cat.icono }}"></i></span>
+          <span class="cv-interest__name">{{ cat.nombre }}</span>
+          <span class="cv-interest__check"><i class="bi bi-check-lg"></i></span>
+        </label>
+      {% endfor %}
+    </div>
+    <button type="button" class="btn cv-btn-primary cv-btn-wide" data-next>
+      Continuar <i class="bi bi-arrow-right"></i>
+    </button>
+  </section>
+
+  {# Paso 3 · Grupos recomendados #}
+  <section class="cv-step" data-step="2" aria-label="Descubre grupos">
+    {{ titulo_seccion("bi-people", "Descubre", "grupos",
+                      "Explora grupos y actividades <span class='text-cv-pink'>recomendadas</span> para ti.") }}
+    <div class="cv-panel">
+      <p class="cv-panel__title"><i class="bi bi-star-fill text-cv-yellow"></i> Te recomendamos
+        <a class="ms-auto cv-link" href="{{ url_for('main.descubre') }}">Ver todos <i class="bi bi-arrow-right"></i></a></p>
+      <div class="row g-3" id="recomendadas">
+        {% for act in actividades %}
+          <div class="col-12 col-sm-6 col-lg-3" data-categoria="{{ act.categoria }}">
+            {{ tarjeta_grupo(act, claro=true) }}
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+    <button type="button" class="btn cv-btn-primary cv-btn-wide" data-next>
+      Continuar <i class="bi bi-arrow-right"></i>
+    </button>
+  </section>
+
+  {# Paso 4 · Mapa (pendiente de plano del campus) #}
+  <section class="cv-step" data-step="3" aria-label="Ubica tu actividad">
+    {{ titulo_seccion("bi-geo-alt", "Ubica tu", "actividad",
+                      "Encuentra el <span class='text-cv-pink'>camino más rápido</span> dentro del campus.") }}
+    <div class="cv-map-soon">
+      <i class="bi bi-map"></i>
+      <h2>Mapa interactivo del campus Calle 100</h2>
+      <p>Muy pronto podrás ver dónde queda cada actividad y cómo llegar.</p>
+    </div>
+    <button type="submit" class="btn cv-btn-primary cv-btn-wide">
+      Iniciar <i class="bi bi-arrow-right"></i>
+    </button>
+  </section>
+
+  <div class="cv-progress" role="tablist" aria-label="Progreso">
+    {% for i in range(4) %}<button type="button" class="cv-progress__dot {{ 'is-active' if i == 0 }}" data-goto="{{ i }}" aria-label="Paso {{ i + 1 }}"></button>{% endfor %}
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/onboarding.js') }}"></script>
+{% endblock %}

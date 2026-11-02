@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import thumb, tarjeta_destacada %}
+{% block title %}{{ act.nombre }}{% endblock %}
+
+{% block content %}
+<a class="cv-link mb-3 d-inline-block" href="{{ url_for('main.descubre', categoria=act.categoria) }}">
+  <i class="bi bi-arrow-left"></i> Volver a {{ act.cat.nombre }}
+</a>
+
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="cv-card">
+      {{ thumb(act, "260px") }}
+      <div class="cv-card__body p-4">
+        <span class="cv-chip cv-bg-{{ act.cat.color }}"><i class="bi {{ act.cat.icono }}"></i> {{ act.cat.nombre }}</span>
+        <h1 class="cv-detail__title">{{ act.nombre }}</h1>
+        <p class="lead">{{ act.descripcion }}</p>
+        <p class="cv-muted">{{ act.detalle }}</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="cv-card p-4">
+      <ul class="cv-facts">
+        <li><i class="bi bi-calendar3"></i><div><small>Horario</small>{% for h in act.horario %}<span>{{ h }}</span>{% endfor %}</div></li>
+        <li><i class="bi bi-geo-alt"></i><div><small>Lugar</small><span>{{ act.ubicacion.nombre }} · {{ act.ubicacion.sede }}</span></div></li>
+        <li><i class="bi bi-person-badge"></i><div><small>Responsable</small><span>{{ act.responsable }}</span></div></li>
+        <li><i class="bi bi-bar-chart"></i><div><small>Nivel</small><span>{{ act.nivel }}</span></div></li>
+        <li><i class="bi bi-people"></i><div><small>Miembros</small><span>{{ act.miembros }}</span></div></li>
+      </ul>
+
+      {% set ocupados = act.cupos_total - act.cupos_disponibles %}
+      <div class="d-flex justify-content-between small mb-1">
+        <span>Cupos disponibles</span><strong>{{ act.cupos_disponibles }} / {{ act.cupos_total }}</strong>
+      </div>
+      <div class="progress cv-progressbar mb-4" role="progressbar" aria-label="Ocupación"
+           aria-valuenow="{{ ocupados }}" aria-valuemin="0" aria-valuemax="{{ act.cupos_total }}">
+        <div class="progress-bar" style="width: {{ (ocupados / act.cupos_total * 100)|round|int }}%"></div>
+      </div>
+
+      {% if inscrito %}
+        <a class="btn cv-btn-outline w-100" href="{{ url_for('main.mis_actividades') }}">
+          <i class="bi bi-check2-circle"></i> Solicitud enviada · ver mis actividades
+        </a>
+      {% elif act.cupos_disponibles == 0 %}
+        <button class="btn btn-secondary w-100" disabled>Sin cupos disponibles</button>
+      {% else %}
+        <form method="post" action="{{ url_for('main.inscribir', slug=act.slug) }}">
+          <button class="btn cv-btn-primary w-100">Solicitar inscripción <i class="bi bi-arrow-right"></i></button>
+        </form>
+      {% endif %}
+      <a class="btn cv-btn-ghost w-100 mt-2" href="{{ url_for('main.mapa') }}"><i class="bi bi-geo-alt"></i> Cómo llegar</a>
+    </div>
+  </div>
+</div>
+
+{% if relacionadas %}
+<section class="mt-5">
+  <div class="cv-section-head"><h2>También en {{ act.cat.nombre }}</h2></div>
+  <div class="row g-3">
+    {% for r in relacionadas %}<div class="col-12 col-sm-6 col-lg-4">{{ tarjeta_destacada(r) }}</div>{% endfor %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

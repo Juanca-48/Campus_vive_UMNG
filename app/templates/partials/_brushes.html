@@ -1,0 +1,13 @@
+{# Pinceladas rosa y amarilla de los mockups, dibujadas como SVG con un filtro de textura. #}
+<svg class="cv-brushes" viewBox="0 0 1440 810" preserveAspectRatio="none" aria-hidden="true">
+  <defs>
+    <filter id="cvBrush" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9 0.04" numOctaves="2" seed="4" result="ruido"/>
+      <feDisplacementMap in="SourceGraphic" in2="ruido" scale="18"/>
+    </filter>
+  </defs>
+  <path d="M -40 170 C 180 150, 330 260, 420 470" stroke="var(--cv-pink)" stroke-width="95"
+        fill="none" stroke-linecap="round" filter="url(#cvBrush)"/>
+  <path d="M 1480 170 C 1260 190, 1110 330, 1040 520" stroke="var(--cv-yellow)" stroke-width="95"
+        fill="none" stroke-linecap="round" filter="url(#cvBrush)"/>
+</svg>

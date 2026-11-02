@@ -1,0 +1,66 @@
+{# Miniatura de una actividad: usa la foto cuando exista, si no un degradado por categoría. #}
+{% macro thumb(act, alto="140px") %}
+  <div class="cv-thumb cv-bg-{{ act.cat.color }}" style="--cv-thumb-h: {{ alto }}">
+    {% if act.imagen %}
+      <img src="{{ url_for('static', filename='img/actividades/' ~ act.imagen) }}" alt="{{ act.nombre }}">
+    {% else %}
+      <i class="bi {{ act.icono }} cv-thumb__icon" aria-hidden="true"></i>
+    {% endif %}
+    {% if act.etiqueta %}<span class="cv-tag cv-tag--{{ 'new' if act.etiqueta == 'Nuevo' else 'pop' }}">{{ act.etiqueta }}</span>{% endif %}
+  </div>
+{% endmacro %}
+
+{# Tarjeta grande (Descubre / onboarding): icono circular, descripción, miembros y sede. #}
+{% macro tarjeta_grupo(act, claro=false) %}
+  <article class="cv-card cv-card--grupo {{ 'cv-card--light' if claro }} h-100" data-categoria="{{ act.categoria }}" data-nombre="{{ act.nombre|lower }}">
+    {{ thumb(act, "130px") }}
+    <div class="cv-card__body">
+      <span class="cv-badge-icon cv-bg-{{ act.cat.color }}"><i class="bi {{ act.icono }}"></i></span>
+      <h3 class="cv-card__title">{{ act.nombre }}</h3>
+      <p class="cv-card__cat">{{ act.cat.nombre }}</p>
+      <p class="cv-card__desc">{{ act.descripcion }}</p>
+      <div class="cv-card__foot">
+        <div class="cv-meta">
+          <span><i class="bi bi-people"></i> {{ act.miembros }} miembros</span>
+          <span><i class="bi bi-geo-alt"></i> {{ act.ubicacion.sede }}</span>
+        </div>
+        <a class="cv-arrow stretched-link" href="{{ url_for('main.actividad', slug=act.slug) }}"
+           aria-label="Ver {{ act.nombre }}"><i class="bi bi-arrow-right"></i></a>
+      </div>
+    </div>
+  </article>
+{% endmacro %}
+
+{# Tarjeta compacta (Actividades destacadas en Inicio). #}
+{% macro tarjeta_destacada(act) %}
+  <article class="cv-card cv-card--mini h-100">
+    {{ thumb(act, "110px") }}
+    <div class="cv-card__body">
+      <h3 class="cv-card__title">
+        <a class="stretched-link" href="{{ url_for('main.actividad', slug=act.slug) }}">{{ act.nombre }}</a>
+      </h3>
+      <p class="cv-meta-line"><i class="bi bi-geo-alt text-cv-yellow"></i> {{ act.ubicacion.nombre }}</p>
+      <div class="cv-meta">
+        <span><i class="bi bi-bar-chart-fill text-cv-pink"></i> {{ act.nivel }}</span>
+        <span><i class="bi bi-people text-cv-pink"></i> {{ act.cupos_disponibles }} cupos</span>
+      </div>
+    </div>
+  </article>
+{% endmacro %}
+
+{% macro evento_fecha(ev) %}
+  <div class="cv-date">
+    <span class="cv-date__day">{{ ev.fecha.day }}</span>
+    <span class="cv-date__month">{{ ev.fecha|mes }}</span>
+  </div>
+{% endmacro %}
+
+{% macro titulo_seccion(icono, normal, resaltado, subtitulo=None) %}
+  <header class="cv-heading text-center">
+    <h1>
+      <i class="bi {{ icono }} cv-heading__icon"></i>
+      {{ normal }} <span class="cv-script">{{ resaltado }}</span><span class="cv-sparks" aria-hidden="true"></span>
+    </h1>
+    {% if subtitulo %}<p class="cv-heading__sub">{{ subtitulo|safe }}</p>{% endif %}
+  </header>
+{% endmacro %}

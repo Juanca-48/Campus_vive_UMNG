@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}No encontrado{% endblock %}
+
+{% block content %}
+<div class="cv-empty">
+  <i class="bi bi-signpost-split"></i>
+  <h1 class="h3">Esta página no existe</h1>
+  <p>Puede que la actividad haya cambiado de nombre.</p>
+  <a class="btn cv-btn-primary" href="{{ url_for('main.inicio') }}">Volver al inicio</a>
+</div>
+{% endblock %}

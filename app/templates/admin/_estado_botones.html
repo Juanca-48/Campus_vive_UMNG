@@ -1,0 +1,14 @@
+{# Botones de aprobar / rechazar / quitar para una inscripción `ins`. `volver` = URL de regreso. #}
+{% for accion, texto, estado in [("aprobar", "Aprobar", "Aprobada"), ("rechazar", "Rechazar", "Rechazada")] %}
+  {% if ins.estado != estado %}
+    <form method="post" action="{{ url_for('admin.cambiar_estado', inscripcion_id=ins.id, accion=accion) }}" class="d-inline">
+      <input type="hidden" name="volver" value="{{ volver }}">
+      <button class="btn btn-sm {{ 'cv-btn-primary' if accion == 'aprobar' else 'cv-btn-outline' }}">{{ texto }}</button>
+    </form>
+  {% endif %}
+{% endfor %}
+<form method="post" action="{{ url_for('admin.cambiar_estado', inscripcion_id=ins.id, accion='quitar') }}" class="d-inline"
+      onsubmit="return confirm('¿Retirar a {{ ins.usuario.nombre|e }} de {{ ins.actividad.nombre|e }}?')">
+  <input type="hidden" name="volver" value="{{ volver }}">
+  <button class="btn btn-sm btn-outline-light" aria-label="Retirar"><i class="bi bi-person-dash"></i></button>
+</form>

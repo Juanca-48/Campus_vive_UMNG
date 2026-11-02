@@ -1,0 +1,49 @@
+{% extends "admin/_layout.html" %}
+{% set seccion = "admin.usuarios" %}
+
+{% block panel %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <h2 class="h5 mb-0">Perfiles registrados ({{ usuarios|length }})</h2>
+  <input class="form-control cv-input" style="max-width: 280px" type="search" id="buscarUsuario"
+         placeholder="Buscar por nombre o correo…" aria-label="Buscar usuario">
+</div>
+<div class="cv-card p-0 overflow-hidden">
+  <div class="table-responsive">
+    <table class="table cv-table mb-0 align-middle">
+      <thead>
+        <tr><th>Usuario</th><th>Rol</th><th>Intereses</th><th>Actividades</th><th>Registro</th><th>Último ingreso</th></tr>
+      </thead>
+      <tbody>
+        {% for u in usuarios %}
+          <tr data-buscar="{{ (u.nombre ~ ' ' ~ u.correo)|lower }}">
+            <td>{{ u.nombre }}<br><small class="cv-muted">{{ u.correo }}</small></td>
+            <td><span class="cv-status {{ 'cv-status--aprobada' if u.es_admin else 'cv-status--pendiente' }}">{{ "Admin" if u.es_admin else "Estudiante" }}</span></td>
+            <td>
+              {% for slug in u.categorias_interes %}{% set cat = categorias|selectattr("slug", "equalto", slug)|first %}
+                <span class="cv-chip cv-bg-{{ cat.color }} mb-1">{{ cat.nombre }}</span>
+              {% else %}<span class="cv-muted small">{{ "—" if u.es_admin or u.onboarding_completo else "Sin completar bienvenida" }}</span>{% endfor %}
+            </td>
+            <td class="small">
+              {% for ins in u.inscripciones %}
+                <a href="{{ url_for('admin.inscritos', actividad_id=ins.actividad_id) }}">{{ ins.actividad.nombre }}</a>
+                <span class="cv-muted">({{ ins.estado|lower }})</span>{{ "," if not loop.last }}
+              {% else %}<span class="cv-muted">—</span>{% endfor %}
+            </td>
+            <td class="small text-nowrap">{{ u.creado_en|local("%d/%m/%Y") }}</td>
+            <td class="small text-nowrap">{{ u.ultimo_ingreso|local("%d/%m/%Y %H:%M") if u.ultimo_ingreso else "Nunca" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.getElementById("buscarUsuario").addEventListener("input", (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    document.querySelectorAll("tr[data-buscar]").forEach((tr) => tr.classList.toggle("d-none", !tr.dataset.buscar.includes(q)));
+  });
+</script>
+{% endblock %}

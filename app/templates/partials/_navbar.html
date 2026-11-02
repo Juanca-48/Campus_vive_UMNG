@@ -1,0 +1,58 @@
+{% set enlaces = [
+  ("main.inicio", "bi-house-door-fill", "Inicio"),
+  ("main.descubre", "bi-search", "Descubre"),
+  ("main.personaliza", "bi-heart", "Personaliza"),
+  ("main.mis_actividades", "bi-clipboard-check", "Mis actividades"),
+  ("main.calendario", "bi-calendar-check", "Calendario"),
+  ("main.mapa", "bi-geo-alt", "Mapa"),
+  ("main.novedades", "bi-megaphone", "Novedades"),
+] %}
+<nav class="navbar navbar-expand-lg cv-navbar sticky-top" data-bs-theme="dark">
+  <div class="container-xl">
+    <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('main.inicio') }}">
+      {% with clase="cv-brand--sm" %}{% include "partials/_brand.html" %}{% endwith %}
+    </a>
+
+    <div class="d-flex align-items-center gap-2 order-lg-last">
+      <a class="cv-icon-btn position-relative" href="{{ url_for('main.novedades') }}" aria-label="Notificaciones">
+        <i class="bi bi-bell"></i><span class="cv-dot"></span>
+      </a>
+      {% if usuario %}
+        <div class="dropdown">
+          <button class="cv-avatar dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+            {{ (usuario.nombre.split()|map('first')|join|upper)[:2] }}
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><span class="dropdown-item-text small text-secondary">{{ usuario.correo }}</span></li>
+            <li><a class="dropdown-item" href="{{ url_for('main.mis_actividades') }}">Mis actividades</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('main.personaliza') }}">Mis intereses</a></li>
+            {% if usuario.rol == 'admin' %}
+              <li><a class="dropdown-item" href="{{ url_for('admin.panel') }}">Panel Bienestar</a></li>
+            {% endif %}
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Cerrar sesión</a></li>
+          </ul>
+        </div>
+      {% else %}
+        <a class="btn cv-btn-outline btn-sm" href="{{ url_for('auth.login') }}">Ingresar</a>
+      {% endif %}
+      <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#cvNav"
+              aria-controls="cvNav" aria-expanded="false" aria-label="Abrir menú">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+    </div>
+
+    <div class="collapse navbar-collapse justify-content-center" id="cvNav">
+      <ul class="navbar-nav cv-nav">
+        {% for endpoint, icono, texto in enlaces %}
+          <li class="nav-item">
+            <a class="nav-link {% if request.endpoint == endpoint %}active{% endif %}"
+               href="{{ url_for(endpoint) }}" {% if request.endpoint == endpoint %}aria-current="page"{% endif %}>
+              <i class="bi {{ icono }}"></i><span>{{ texto }}</span>
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</nav>

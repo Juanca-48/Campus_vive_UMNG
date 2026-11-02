@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import titulo_seccion %}
+{% block title %}Novedades{% endblock %}
+
+{% block content %}
+{{ titulo_seccion("bi-megaphone", "Últimas", "novedades", "Anuncios de Bienestar Universitario.") }}
+<div class="cv-news mx-auto">
+  {% for n in novedades %}
+    <article class="cv-card p-4 mb-3">
+      <p class="cv-muted small mb-1">{{ n.fecha|fecha_larga }}</p>
+      <h3 class="cv-card__title">{{ n.titulo }}</h3>
+      <p class="mb-0">{{ n.resumen }}</p>
+    </article>
+  {% endfor %}
+</div>
+{% endblock %}

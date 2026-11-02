@@ -1,0 +1,45 @@
+{% extends "admin/_layout.html" %}
+{% set seccion = "admin.panel" %}
+
+{% block panel %}
+<div class="row g-3 mb-4">
+  {% for etiqueta, valor, icono, destino in [
+      ("Estudiantes registrados", resumen.estudiantes, "bi-people", url_for('admin.usuarios')),
+      ("Solicitudes pendientes", resumen.pendientes, "bi-hourglass-split", "#pendientes"),
+      ("Actividades", resumen.actividades, "bi-grid", url_for('admin.actividades')),
+      ("Próximos eventos", resumen.eventos, "bi-calendar-event", url_for('admin.eventos'))] %}
+    <div class="col-6 col-lg-3">
+      <a class="cv-card cv-kpi p-3 d-flex" href="{{ destino }}">
+        <i class="bi {{ icono }}"></i>
+        <span class="cv-kpi__value">{{ valor }}</span>
+        <span class="cv-kpi__label">{{ etiqueta }}</span>
+      </a>
+    </div>
+  {% endfor %}
+</div>
+
+<h2 class="h5 mb-3" id="pendientes">Solicitudes pendientes</h2>
+<div class="cv-card p-0 overflow-hidden">
+  {% if pendientes %}
+  <div class="table-responsive">
+    <table class="table cv-table mb-0 align-middle">
+      <thead><tr><th>Estudiante</th><th>Actividad</th><th>Fecha</th><th class="text-end">Acciones</th></tr></thead>
+      <tbody>
+        {% for ins in pendientes %}
+          <tr>
+            <td>{{ ins.usuario.nombre }}<br><small class="cv-muted">{{ ins.usuario.correo }}</small></td>
+            <td><a href="{{ url_for('admin.inscritos', actividad_id=ins.actividad_id) }}">{{ ins.actividad.nombre }}</a></td>
+            <td>{{ ins.creada_en|local("%d/%m/%Y") }}</td>
+            <td class="text-end text-nowrap">
+              {% with volver=url_for('admin.panel') %}{% include "admin/_estado_botones.html" %}{% endwith %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div class="cv-empty"><i class="bi bi-inbox"></i><p>No hay solicitudes pendientes.</p></div>
+  {% endif %}
+</div>
+{% endblock %}

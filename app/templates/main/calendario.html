@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import evento_fecha, titulo_seccion %}
+{% block title %}Calendario{% endblock %}
+
+{% block content %}
+{{ titulo_seccion("bi-calendar-check", "Calendario de", "eventos", "Festivales, torneos y muestras abiertas a toda la comunidad.") }}
+
+<div class="cv-timeline mx-auto">
+  {% for ev in eventos %}
+    <article class="cv-timeline__item">
+      {{ evento_fecha(ev) }}
+      <div class="cv-card cv-timeline__card">
+        <span class="cv-chip cv-bg-{{ ev.cat.color }}"><i class="bi {{ ev.cat.icono }}"></i> {{ ev.cat.nombre }}</span>
+        <h3 class="cv-card__title mt-2">{{ ev.nombre }}</h3>
+        <p class="cv-meta-line"><i class="bi bi-calendar3"></i> {{ ev.fecha|fecha_larga }} · {{ ev.hora|hora }}</p>
+        <p class="cv-meta-line"><i class="bi bi-geo-alt"></i> {{ ev.lugar }}</p>
+      </div>
+    </article>
+  {% endfor %}
+</div>
+{% endblock %}
