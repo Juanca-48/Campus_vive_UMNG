@@ -1,7 +1,12 @@
 """Panel de Bienestar Universitario: actividades, calendario, inscritos y usuarios."""
+
+import csv
+import io
 import re
 import unicodedata
 from datetime import date, time
+
+from flask import Blueprint, Response, abort, flash, redirect, render_template, request, url_for
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 
@@ -39,18 +44,120 @@ def _slug(texto, excluir_id=None):
 
 # --- resumen -----------------------------------------------------------------------
 
+# --- resumen y estadísticas --------------------------------------------------------
+
+def _estadisticas():
+    actividades = catalogo.get_actividades()
+    for a in actividades:
+        ocupados = a["cupos_total"] - a["cupos_disponibles"]
+        a["ocupacion_pct"] = round(ocupados / a["cupos_total"] * 100) if a["cupos_total"] else 0
+
+    ranking = sorted(actividades, key=lambda a: (a["miembros"], a["pendientes"], a["ocupacion_pct"]), reverse=True)
+    mas_concurridas = ranking[:3]
+    menos_concurridas = sorted(actividades, key=lambda a: (a["miembros"], a["pendientes"], a["ocupacion_pct"]))[:3]
+
+    total_aprobados = sum(a["miembros"] for a in actividades)
+    total_pendientes = sum(a["pendientes"] for a in actividades)
+
+    por_categoria = []
+    for cat in catalogo.get_categorias():
+        grupo = [a for a in actividades if a["categoria"] == cat["slug"]]
+        aprobados = sum(a["miembros"] for a in grupo)
+        pendientes = sum(a["pendientes"] for a in grupo)
+        por_categoria.append({
+            **cat,
+            "actividades": len(grupo),
+            "aprobados": aprobados,
+            "pendientes": pendientes,
+            "porcentaje": round(aprobados / total_aprobados * 100) if total_aprobados else 0,
+        })
+
+    return {
+        "ranking": ranking,
+        "mas_concurridas": mas_concurridas,
+        "menos_concurridas": menos_concurridas,
+        "por_categoria": por_categoria,
+        "total_aprobados": total_aprobados,
+        "total_pendientes": total_pendientes,
+    }
+
+
 @bp.route("/")
 def panel():
-    actividades = catalogo.get_actividades()
+    stats = _estadisticas()
     pendientes = (Inscripcion.query.filter_by(estado=ESTADO_PENDIENTE)
                   .order_by(Inscripcion.creada_en).all())
     resumen = {
         "estudiantes": Usuario.query.filter_by(rol=ROL_ESTUDIANTE).count(),
         "pendientes": len(pendientes),
-        "actividades": len(actividades),
+        "actividades": len(stats["ranking"]),
         "eventos": Evento.query.filter(Evento.fecha >= date.today()).count(),
+        "aprobados": stats["total_aprobados"],
     }
-    return render_template("admin/panel.html", pendientes=pendientes, resumen=resumen)
+    return render_template("admin/panel.html", pendientes=pendientes, resumen=resumen, stats=stats)
+
+
+@bp.route("/reporte.csv")
+def reporte_csv():
+    stats = _estadisticas()
+    estudiantes = Usuario.query.filter_by(rol=ROL_ESTUDIANTE).count()
+    eventos_prox = Evento.query.filter(Evento.fecha >= date.today()).count()
+    inscripciones = Inscripcion.query.order_by(Inscripcion.creada_en.desc()).all()
+
+    salida = io.StringIO()
+    writer = csv.writer(salida)
+
+    # 1. Resumen general
+    writer.writerow(["REPORTE GENERAL - CAMPUS VIVE UMNG"])
+    writer.writerow(["Fecha de generacion", date.today().isoformat()])
+    writer.writerow(["Estudiantes registrados", estudiantes])
+    writer.writerow(["Actividades activas", len(stats["ranking"])])
+    writer.writerow(["Inscripciones aprobadas", stats["total_aprobados"]])
+    writer.writerow(["Solicitudes pendientes", stats["total_pendientes"]])
+    writer.writerow(["Proximos eventos", eventos_prox])
+    if stats["mas_concurridas"]:
+        top = stats["mas_concurridas"][0]
+        low = stats["menos_concurridas"][0]
+        writer.writerow(["Actividad mas concurrida", f"{top['nombre']} ({top['miembros']} aprobados)"])
+        writer.writerow(["Actividad menos concurrida", f"{low['nombre']} ({low['miembros']} aprobados)"])
+    writer.writerow([])
+
+    # 2. Estadisticas por actividad (de mayor a menor concurrencia)
+    writer.writerow(["ESTADISTICAS POR ACTIVIDAD (MAS A MENOS CONCURRIDAS)"])
+    writer.writerow(["Actividad", "Categoria", "Responsable", "Lugar", "Sede",
+                     "Aprobados", "Pendientes", "Cupos totales", "Cupos disponibles", "Ocupacion (%)"])
+    for a in stats["ranking"]:
+        writer.writerow([
+            a["nombre"], a["cat"]["nombre"], a["responsable"],
+            a["ubicacion"]["nombre"], a["ubicacion"]["sede"],
+            a["miembros"], a["pendientes"], a["cupos_total"],
+            a["cupos_disponibles"], f"{a['ocupacion_pct']}%",
+        ])
+    writer.writerow([])
+
+    # 3. Resumen por categoria
+    writer.writerow(["RESUMEN POR CATEGORIA"])
+    writer.writerow(["Categoria", "Cantidad de actividades", "Aprobados", "Pendientes", "Participacion (%)"])
+    for c in stats["por_categoria"]:
+        writer.writerow([c["nombre"], c["actividades"], c["aprobados"], c["pendientes"], f"{c['porcentaje']}%"])
+    writer.writerow([])
+
+    # 4. Detalle de inscripciones
+    writer.writerow(["DETALLE DE INSCRIPCIONES"])
+    writer.writerow(["Actividad", "Estudiante", "Correo", "Estado", "Fecha de solicitud"])
+    for ins in inscripciones:
+        writer.writerow([
+            ins.actividad.nombre, ins.usuario.nombre, ins.usuario.correo,
+            ins.estado, ins.creada_en.strftime("%Y-%m-%d %H:%M"),
+        ])
+
+    contenido = salida.getvalue().encode("utf-8-sig")  # BOM para que Excel lea bien tildes y ñ
+    nombre_archivo = f"reporte_campus_vive_{date.today().isoformat()}.csv"
+    return Response(
+        contenido,
+        mimetype="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f"attachment; filename={nombre_archivo}"},
+    )
 
 
 # --- actividades -------------------------------------------------------------------

@@ -5,12 +5,29 @@
 {% block content %}
 {{ titulo_seccion("bi-geo-alt", "Ubica tu", "actividad",
                   "Encuentra el <span class='text-cv-pink'>camino más rápido</span> dentro del campus.") }}
-{# Pendiente: plano del campus Calle 100 con puntos de interés y rutas. #}
-<div class="cv-map-soon">
-  <i class="bi bi-map"></i>
-  <h2>Mapa interactivo del campus Calle 100</h2>
-  <p>Estamos construyendo el plano con los bloques, aulas y escenarios deportivos.<br>
-     Mientras tanto, consulta el lugar de cada actividad en su ficha.</p>
-  <a class="btn cv-btn-primary" href="{{ url_for('main.descubre') }}">Ver actividades</a>
+
+<div class="mb-4 d-flex flex-wrap gap-2 justify-content-center">
+  <a href="{{ url_for('main.mapa') }}"
+     class="btn btn-sm {{ 'cv-btn-primary' if not act else 'cv-btn-ghost' }}">
+    Campus general
+  </a>
+  {% for item in actividades %}
+    <a href="{{ url_for('main.mapa', actividad=item.slug) }}"
+       class="btn btn-sm {{ 'cv-btn-primary' if act and act.slug == item.slug else 'cv-btn-ghost' }}">
+      {{ item.nombre }}
+    </a>
+  {% endfor %}
+</div>
+
+<div class="cv-card p-3 mx-auto text-center" style="max-width: 820px;">
+  {% set ruta_mapa = act.mapa if act else 'img/mapas/campus_general.jpg' %}
+  <img src="{{ url_for('static', filename=ruta_mapa) }}"
+       alt="Mapa de {{ act.nombre if act else 'Campus UMNG' }}"
+       class="img-fluid rounded-3">
+  {% if act %}
+    <p class="mt-3 mb-0 cv-muted">
+      <strong>{{ act.nombre }}</strong> · {{ act.ubicacion.nombre }} ({{ act.ubicacion.sede }})
+    </p>
+  {% endif %}
 </div>
 {% endblock %}

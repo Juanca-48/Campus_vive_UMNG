@@ -363,3 +363,8 @@ a.cv-kpi:hover { border-color: var(--cv-pink); }
 .form-select.cv-input { --bs-form-select-bg-img: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23a9b4d0' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e"); }
 .form-select.cv-input option { background: var(--cv-navy-2); }
 .cv-input:disabled { background: var(--cv-navy); color: var(--cv-muted); opacity: .6; }
+/* --- barras de estadísticas con los colores de categoría ------------------ */
+.cv-progressbar .progress-bar.cv-bg-pink { background: var(--cv-pink); }
+.cv-progressbar .progress-bar.cv-bg-yellow { background: var(--cv-yellow); }
+.cv-progressbar .progress-bar.cv-bg-blue { background: var(--cv-blue); }
+.cv-progressbar .progress-bar.cv-bg-green { background: var(--cv-green); }

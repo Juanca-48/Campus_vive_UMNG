@@ -50,7 +50,10 @@
           <button class="btn cv-btn-primary w-100">Solicitar inscripción <i class="bi bi-arrow-right"></i></button>
         </form>
       {% endif %}
-      <a class="btn cv-btn-ghost w-100 mt-2" href="{{ url_for('main.mapa') }}"><i class="bi bi-geo-alt"></i> Cómo llegar</a>
+
+      <a class="btn cv-btn-ghost w-100 mt-2" href="{{ url_for('main.mapa', actividad=act.slug) }}">
+        <i class="bi bi-geo-alt"></i> Cómo llegar
+      </a>
     </div>
   </div>
 </div>

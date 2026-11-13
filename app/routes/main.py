@@ -90,10 +90,11 @@ def cancelar(actividad_id):
 def calendario():
     return render_template("main/calendario.html", eventos=catalogo.get_eventos())
 
-
 @bp.route("/mapa")
 def mapa():
-    return render_template("main/mapa.html")
+    slug = request.args.get("actividad")
+    act = catalogo.get_actividad(slug) if slug else None
+    return render_template("main/mapa.html", act=act, actividades=catalogo.get_actividades())
 
 
 @bp.route("/novedades")

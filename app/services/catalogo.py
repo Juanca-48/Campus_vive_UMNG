@@ -12,6 +12,18 @@ from app.models import ESTADO_APROBADA, ESTADO_PENDIENTE, Actividad, Evento, Ins
 
 _CATEGORIAS = {c["slug"]: c for c in mock.CATEGORIAS}
 
+MAPAS_POR_ACTIVIDAD = {
+    "futbol-umng": "img/mapas/MapaCancha1.png",
+    "teatro-en-escena": "img/mapas/MapaCancha2.png",
+    "arte-y-color": "img/mapas/MapaArtes.png",
+    "explora-naturaleza": "img/mapas/MapaArtes.png",
+    "danza-contemporanea": "img/mapas/MapaGym.png",
+    "fotografia": "img/mapas/MapaFoto.png",
+    "yoga-y-bienestar": "img/mapas/MapaGym.png",
+    "guitarra-acustica": "img/mapas/MapaFoto.png",
+    "baloncesto": "img/mapas/MapaCancha2.png",
+    "coro-umng": "img/mapas/MapaFoto.png",
+}
 
 def _conteos():
     """{actividad_id: {estado: n}} en una sola consulta."""
@@ -34,6 +46,7 @@ def _a_dict(a, conteos):
         "miembros": c.get(ESTADO_APROBADA, 0), "pendientes": c.get(ESTADO_PENDIENTE, 0),
         "horario": [h for h in a.horario.splitlines() if h.strip()],
         "responsable": a.responsable, "ubicacion": {"nombre": a.lugar, "sede": a.sede},
+        "mapa": MAPAS_POR_ACTIVIDAD.get(a.slug, "img/mapas/campus_general.jpg"),
         "etiqueta": a.etiqueta, "destacada": a.destacada,
     }
 

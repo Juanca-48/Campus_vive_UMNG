@@ -2,12 +2,19 @@
 {% set seccion = "admin.panel" %}
 
 {% block panel %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <h2 class="h5 mb-0">Resumen general</h2>
+  <a class="btn cv-btn-primary" href="{{ url_for('admin.reporte_csv') }}">
+    <i class="bi bi-file-earmark-spreadsheet"></i> Descargar reporte CSV
+  </a>
+</div>
+
 <div class="row g-3 mb-4">
   {% for etiqueta, valor, icono, destino in [
       ("Estudiantes registrados", resumen.estudiantes, "bi-people", url_for('admin.usuarios')),
+      ("Inscripciones aprobadas", resumen.aprobados, "bi-check2-circle", "#estadisticas"),
       ("Solicitudes pendientes", resumen.pendientes, "bi-hourglass-split", "#pendientes"),
-      ("Actividades", resumen.actividades, "bi-grid", url_for('admin.actividades')),
-      ("Próximos eventos", resumen.eventos, "bi-calendar-event", url_for('admin.eventos'))] %}
+      ("Actividades / Eventos", resumen.actividades ~ " · " ~ resumen.eventos, "bi-grid", url_for('admin.actividades'))] %}
     <div class="col-6 col-lg-3">
       <a class="cv-card cv-kpi p-3 d-flex" href="{{ destino }}">
         <i class="bi {{ icono }}"></i>
@@ -17,6 +24,132 @@
     </div>
   {% endfor %}
 </div>
+
+{# --- Panel de visualización ---------------------------------------------------- #}
+<section id="estadisticas" class="mb-4">
+  <div class="row g-3 mb-3">
+    <div class="col-lg-4">
+      <div class="cv-card p-3 h-100">
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <i class="bi bi-trophy-fill text-cv-yellow"></i>
+          <h3 class="h6 mb-0">Más concurridas</h3>
+        </div>
+        <div class="d-grid gap-3">
+          {% for a in stats.mas_concurridas %}
+            <div>
+              <div class="d-flex justify-content-between align-items-center small mb-1">
+                <a class="fw-semibold text-white" href="{{ url_for('admin.inscritos', actividad_id=a.id) }}">{{ a.nombre }}</a>
+                <span class="text-cv-yellow fw-semibold">{{ a.miembros }} aprob.</span>
+              </div>
+              <div class="progress cv-progressbar">
+                <div class="progress-bar cv-bg-{{ a.cat.color }}" style="width: {{ a.ocupacion_pct }}%"></div>
+              </div>
+              <div class="d-flex justify-content-between cv-muted mt-1" style="font-size: .75rem;">
+                <span>{{ a.cat.nombre }}</span>
+                <span>{{ a.ocupacion_pct }}% de cupos</span>
+              </div>
+            </div>
+          {% else %}
+            <p class="cv-muted small mb-0">Sin actividades registradas.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="cv-card p-3 h-100">
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <i class="bi bi-arrow-down-circle text-cv-pink"></i>
+          <h3 class="h6 mb-0">Menos concurridas</h3>
+        </div>
+        <div class="d-grid gap-3">
+          {% for a in stats.menos_concurridas %}
+            <div>
+              <div class="d-flex justify-content-between align-items-center small mb-1">
+                <a class="fw-semibold text-white" href="{{ url_for('admin.inscritos', actividad_id=a.id) }}">{{ a.nombre }}</a>
+                <span class="text-cv-pink fw-semibold">{{ a.miembros }} aprob.</span>
+              </div>
+              <div class="progress cv-progressbar">
+                <div class="progress-bar cv-bg-{{ a.cat.color }}" style="width: {{ a.ocupacion_pct }}%"></div>
+              </div>
+              <div class="d-flex justify-content-between cv-muted mt-1" style="font-size: .75rem;">
+                <span>{{ a.cat.nombre }}</span>
+                <span>{{ a.cupos_disponibles }} cupos libres</span>
+              </div>
+            </div>
+          {% else %}
+            <p class="cv-muted small mb-0">Sin actividades registradas.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="cv-card p-3 h-100">
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <i class="bi bi-bar-chart-fill text-cv-blue"></i>
+          <h3 class="h6 mb-0">Participación por categoría</h3>
+        </div>
+        <div class="d-grid gap-3">
+          {% for c in stats.por_categoria %}
+            <div>
+              <div class="d-flex justify-content-between align-items-center small mb-1">
+                <span><i class="bi {{ c.icono }} text-cv-{{ c.color }}"></i> {{ c.nombre }}</span>
+                <span class="cv-muted">{{ c.aprobados }} est. ({{ c.porcentaje }}%)</span>
+              </div>
+              <div class="progress cv-progressbar">
+                <div class="progress-bar cv-bg-{{ c.color }}" style="width: {{ c.porcentaje }}%"></div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cv-card p-0 overflow-hidden">
+    <div class="p-3 border-bottom" style="border-color: var(--cv-line) !important;">
+      <h3 class="h6 mb-0">Ocupación por actividad (de mayor a menor)</h3>
+    </div>
+    <div class="table-responsive">
+      <table class="table cv-table mb-0 align-middle">
+        <thead>
+          <tr>
+            <th>Actividad</th>
+            <th>Categoría</th>
+            <th class="text-end">Aprobados</th>
+            <th class="text-end">Pendientes</th>
+            <th style="min-width: 190px;">Ocupación de cupos</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in stats.ranking %}
+            <tr>
+              <td>
+                <a href="{{ url_for('admin.inscritos', actividad_id=a.id) }}">{{ a.nombre }}</a>
+              </td>
+              <td><span class="cv-chip cv-bg-{{ a.cat.color }}">{{ a.cat.nombre }}</span></td>
+              <td class="text-end fw-semibold">{{ a.miembros }}</td>
+              <td class="text-end">
+                {% if a.pendientes %}<span class="text-cv-yellow">{{ a.pendientes }}</span>{% else %}<span class="cv-muted">0</span>{% endif %}
+              </td>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <div class="progress cv-progressbar flex-grow-1">
+                    <div class="progress-bar cv-bg-{{ a.cat.color }}" style="width: {{ a.ocupacion_pct }}%"></div>
+                  </div>
+                  <small class="cv-muted text-nowrap">{{ a.ocupacion_pct }}%</small>
+                </div>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5" class="text-center cv-muted py-4">No hay actividades registradas.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
 
 <h2 class="h5 mb-3" id="pendientes">Solicitudes pendientes</h2>
 <div class="cv-card p-0 overflow-hidden">
