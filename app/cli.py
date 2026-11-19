@@ -6,12 +6,7 @@ from app.models import ROL_ADMIN, Usuario
 
 
 def registrar_comandos(app):
-    @app.cli.command("init-db")
-    def init_db():
-        """Crea las tablas que falten."""
-        db.create_all()
-        click.echo("Tablas creadas.")
-
+    # No hace falta un comando para crear tablas: create_app lo hace en cada arranque.
     @app.cli.command("crear-admin")
     @click.option("--correo", default="bienestar@unimilitar.edu.co", show_default=True)
     @click.option("--nombre", default="Bienestar Universitario", show_default=True)

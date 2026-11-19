@@ -99,6 +99,12 @@ def cancelar_inscripcion(actividad_id):
 
 # --- protección de vistas -------------------------------------------------------
 
+def _ir_al_login():
+    """Manda al login y recuerda a dónde iba, para volver después de ingresar."""
+    flash("Inicia sesión con tu correo institucional para continuar.", "info")
+    return redirect(url_for("auth.login", next=request.full_path.rstrip("?")))
+
+
 def exigir_estudiante_listo():
     """Guarda para las vistas del estudiante: sesión iniciada y recorrido inicial hecho.
 
@@ -106,8 +112,7 @@ def exigir_estudiante_listo():
     """
     usuario = get_usuario()
     if not usuario:
-        flash("Inicia sesión con tu correo institucional para continuar.", "info")
-        return redirect(url_for("auth.login", next=request.full_path.rstrip("?")))
+        return _ir_al_login()
     if not usuario.es_admin and not usuario.onboarding_completo:
         return redirect(url_for("onboarding.bienvenida"))
     return None
@@ -117,8 +122,7 @@ def login_requerido(vista):
     @wraps(vista)
     def envoltura(*args, **kwargs):
         if not get_usuario():
-            flash("Inicia sesión con tu correo institucional para continuar.", "info")
-            return redirect(url_for("auth.login", next=request.full_path.rstrip("?")))
+            return _ir_al_login()
         return vista(*args, **kwargs)
     return envoltura
 
@@ -128,7 +132,7 @@ def admin_requerido(vista):
     def envoltura(*args, **kwargs):
         usuario = get_usuario()
         if not usuario:
-            return redirect(url_for("auth.login", next=request.full_path.rstrip("?")))
+            return _ir_al_login()
         if not usuario.es_admin:
             flash("Esta sección es solo para Bienestar Universitario.", "warning")
             return redirect(url_for("main.inicio"))

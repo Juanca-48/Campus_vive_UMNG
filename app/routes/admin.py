@@ -44,8 +44,6 @@ def _slug(texto, excluir_id=None):
     return slug
 
 
-# --- resumen -----------------------------------------------------------------------
-
 # --- resumen y estadísticas --------------------------------------------------------
 
 def _estadisticas():
@@ -171,20 +169,9 @@ def actividades():
     return render_template("admin/actividades.html", actividades=catalogo.get_actividades())
 
 
-# --- horario: se guarda como texto, una franja por línea ("Lunes 4:00 p.m. – 6:00 p.m.") -----------
+# --- horario: se guarda como texto, una franja por línea en 24 h ("Lunes 16:00 – 18:00") ---------
 
-_FRANJA = re.compile(r"^(\S+) (\d{1,2}):(\d{2}) (a\.m\.|p\.m\.|m\.) – (\d{1,2}):(\d{2}) (a\.m\.|p\.m\.|m\.)$")
-
-
-def _hora_texto(hhmm):
-    """'16:00' -> '4:00 p.m.'; el mediodía se escribe '12:00 m.' como en los datos de ejemplo."""
-    h, m = map(int, hhmm.split(":"))
-    sufijo = "m." if (h, m) == (12, 0) else ("a.m." if h < 12 else "p.m.")
-    return f"{(h % 12) or 12}:{m:02d} {sufijo}"
-
-
-def _hora_24(h, m, sufijo):
-    return f"{int(h) % 12 + (0 if sufijo == 'a.m.' else 12):02d}:{m}"
+_FRANJA = re.compile(r"^(\S+) (\d{2}:\d{2}) – (\d{2}:\d{2})$")
 
 
 def _leer_horario(texto):
@@ -196,7 +183,7 @@ def _leer_horario(texto):
         if not m or m[1] not in DIAS:
             return None
         dias.append(m[1])
-        rangos.add((_hora_24(m[2], m[3], m[4]), _hora_24(m[5], m[6], m[7])))
+        rangos.add((m[2], m[3]))
     if not rangos:
         return ([], "", "")
     rango = rangos.pop()
@@ -214,7 +201,7 @@ def _horario_del_form(actividad, errores):
     if desde not in HORAS or hasta not in HORAS or hasta <= desde:
         errores.append("Elige el horario: la hora de fin debe ser posterior a la de inicio.")
         return None
-    return "\n".join(f"{d} {_hora_texto(desde)} – {_hora_texto(hasta)}" for d in dias)
+    return "\n".join(f"{d} {desde} – {hasta}" for d in dias)
 
 
 # --- foto opcional ------------------------------------------------------------------------------
@@ -324,7 +311,7 @@ def actividad_form(actividad_id=None):
         horario = _leer_horario(actividad.horario)
     return render_template("admin/actividad_form.html", actividad=actividad, form=f,
                            etiquetas=ETIQUETAS, punto=punto, dias=DIAS, horas=HORAS,
-                           hora_texto=_hora_texto, horario=horario or ([], "", ""),
+                           horario=horario or ([], "", ""),
                            horario_libre=actividad.horario if _leer_horario(actividad.horario) is None else None,
                            foto_actual=actividad.imagen or catalogo.FOTOS.get(actividad.id))
 

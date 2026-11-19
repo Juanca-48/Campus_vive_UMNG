@@ -1,3 +1,4 @@
+import re
 from datetime import timedelta, timezone
 
 from flask import Flask, render_template
@@ -18,6 +19,7 @@ def create_app(config_class=Config):
     with app.app_context():
         db.create_all()  # solo crea las tablas que falten
         _agregar_columnas_faltantes()
+        _migrar_datos_viejos()
         catalogo.sembrar_si_vacio()
     registrar_comandos(app)
     app.before_request(sesion.cargar_usuario)
@@ -53,8 +55,7 @@ def create_app(config_class=Config):
 
     @app.template_filter("hora")
     def hora(t):
-        sufijo = "a.m." if t.hour < 12 else "p.m."
-        return f"{(t.hour % 12) or 12}:{t.minute:02d} {sufijo}"
+        return t.strftime("%H:%M")  # 24 h en toda la app, igual que los horarios
 
     @app.errorhandler(404)
     def no_encontrado(_):
@@ -73,6 +74,21 @@ def _agregar_columnas_faltantes():
             if col.name not in existentes and col.nullable:
                 tipo = col.type.compile(db.engine.dialect)
                 db.session.execute(text(f"ALTER TABLE {tabla.name} ADD COLUMN {col.name} {tipo}"))
+    db.session.commit()
+
+
+# shortcut: arreglos de una sola vez para BD creadas antes del 19-nov-2026; borrar esta función
+# cuando todas las copias del equipo hayan arrancado una vez con esta versión.
+def _migrar_datos_viejos():
+    """Quita la columna nivel (NOT NULL sin valor por defecto en la BD: impediría crear actividades)
+    y pasa los horarios guardados en 12 h ("4:00 p.m.") a 24 h ("16:00")."""
+    if "nivel" in {c["name"] for c in inspect(db.engine).get_columns("actividad")}:
+        db.session.execute(text("ALTER TABLE actividad DROP COLUMN nivel"))
+    for actividad in models.Actividad.query.filter(models.Actividad.horario.contains("m.")):
+        actividad.horario = re.sub(
+            r"(\d{1,2}):(\d{2}) (a\.m\.|p\.m\.|m\.)",
+            lambda m: f"{int(m[1]) % 12 + (0 if m[3] == 'a.m.' else 12):02d}:{m[2]}",
+            actividad.horario)
     db.session.commit()
 
 

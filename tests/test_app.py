@@ -4,7 +4,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from app import create_app
+from sqlalchemy import inspect, text
+
+from app import _migrar_datos_viejos, create_app
 from app.extensions import db
 from app.models import ROL_ADMIN, Actividad, Evento, Inscripcion, Usuario
 from app.services import directorio
@@ -67,7 +69,7 @@ class CampusViveTest(unittest.TestCase):
         self.assertEqual(sorted(slugs), ["ajedrez-agil", "ajedrez-agil-2"])
 
         a = Actividad.query.filter_by(slug="ajedrez-agil").one()
-        self.assertEqual(a.horario, "Lunes 12:00 m. – 2:30 p.m.\nMartes 12:00 m. – 2:30 p.m.")  # orden de la semana
+        self.assertEqual(a.horario, "Lunes 12:00 – 14:30\nMartes 12:00 – 14:30")  # 24 h, orden de la semana
         r = self.c.post(f"/admin/actividades/{a.id}/editar", data={**datos, "cupos_total": "0"})
         self.assertIn("entre 1 y 1000", r.get_data(as_text=True))
         self.c.post(f"/admin/actividades/{a.id}/editar", data={**datos, "nombre": "Ajedrez", "destacada": "on"})
@@ -130,9 +132,7 @@ class CampusViveTest(unittest.TestCase):
 
     def test_admin_ubica_la_actividad_en_el_mapa(self):
         self.login("admin@unimilitar.edu.co", "adminclave")
-        form = self.c.get("/admin/actividades/nueva").get_data(as_text=True)
-        self.assertNotIn('name="nivel"', form)
-        self.assertIn('id="mapaAdmin"', form)
+        self.assertIn('id="mapaAdmin"', self.c.get("/admin/actividades/nueva").get_data(as_text=True))
 
         datos = {"nombre": "Ajedrez", "categoria": "recreacion", "cupos_total": "10"}
         r = self.c.post("/admin/actividades/nueva", data={**datos, "mapa_x": "150", "mapa_y": "20"})
@@ -145,7 +145,25 @@ class CampusViveTest(unittest.TestCase):
         self.registrar("Ana", "ana@unimilitar.edu.co")
         self.login("ana@unimilitar.edu.co")
         self.assertIn("left: 40.0%; top: 22.5%", self.c.get("/mapa?actividad=ajedrez").get_data(as_text=True))
-        self.assertNotIn("Nivel", self.c.get("/actividad/ajedrez").get_data(as_text=True))
+
+    def test_bd_vieja_se_actualiza_al_arrancar(self):
+        # Simula una BD de antes: columna obligatoria que ya no está en el modelo y horario en 12 h.
+        db.session.execute(text("ALTER TABLE actividad ADD COLUMN nivel VARCHAR(40) NOT NULL DEFAULT 'x'"))
+        a = db.session.get(Actividad, 2)
+        a.horario = "Martes 2:00 p.m. – 4:00 p.m.\nViernes 12:00 m. – 12:30 p.m.\nSábados (salida) 7:00 a.m."
+        db.session.commit()
+        _migrar_datos_viejos()
+        self.assertNotIn("nivel", [c["name"] for c in inspect(db.engine).get_columns("actividad")])
+        self.assertEqual(db.session.get(Actividad, 2).horario,
+                         "Martes 14:00 – 16:00\nViernes 12:00 – 12:30\nSábados (salida) 07:00")
+        _migrar_datos_viejos()  # una segunda vez no cambia nada
+        self.assertIn("Martes 14:00 – 16:00", db.session.get(Actividad, 2).horario)
+
+    def test_horas_en_24h(self):
+        self.registrar("Ana", "ana@unimilitar.edu.co")
+        self.login("ana@unimilitar.edu.co")
+        self.assertIn("17:00", self.c.get("/calendario").get_data(as_text=True))  # Festival Cultural
+        self.assertIn("Lunes 18:00 – 20:00", self.c.get("/actividad/danza-contemporanea").get_data(as_text=True))
 
     def test_horario_con_selectores(self):
         self.login("admin@unimilitar.edu.co", "adminclave")

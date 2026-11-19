@@ -34,10 +34,10 @@ de recomendación, no como un simple directorio:
 |---|---|
 | **Descubre** | Catálogo de grupos de cultura, deporte, artes y recreación, con filtros y búsqueda. |
 | **Personaliza** | El estudiante elige sus intereses y recibe actividades recomendadas. |
-| **Conoce** | Horarios, responsable, lugar, nivel y cupos disponibles de cada grupo. |
+| **Conoce** | Foto, horarios, responsable, lugar y cupos disponibles de cada grupo. |
 | **Inscríbete** | Solicitud de inscripción en un paso y seguimiento en *Mis actividades*. |
 | **Calendario** | Festivales, torneos y muestras abiertas a la comunidad. |
-| **Ubica** | Mapa interactivo del campus Calle 100 *(en desarrollo)*. |
+| **Ubica** | Mapa del campus Calle 100 con el punto de cada actividad (*Cómo llegar*). |
 
 Para **Bienestar Universitario** incluye un panel de administración que centraliza la gestión y
 genera datos de participación que hoy la universidad no tiene reunidos.
@@ -49,18 +49,25 @@ estudiantes la usan gratis.
 
 ### Estudiante
 - Registro e inicio de sesión con correo institucional `@unimilitar.edu.co`.
-- Recorrido de bienvenida en 4 pasos para elegir intereses; solo se muestra en el **primer ingreso**.
+- Recorrido de bienvenida en 4 pasos (saludo, intereses, grupos recomendados y mapa del campus);
+  solo se muestra en el **primer ingreso**.
 - Inicio con actividades destacadas, recomendaciones según sus intereses y próximos eventos.
 - Catálogo con filtros por categoría y búsqueda, ficha de cada actividad y solicitud de inscripción.
+- Mapa del campus: cada actividad marca su lugar sobre la foto aérea de la sede.
 - *Mis actividades*: estado de cada solicitud (pendiente, aprobada o rechazada) y opción de cancelarla.
+- *Mi perfil* (botón del avatar): código, carrera y semestre, intereses y actividades. Los datos
+  académicos se sincronizan en cada ingreso con el directorio de la universidad; por ahora es un
+  directorio de prueba con datos inventados.
 
 ### Administrador (Bienestar Universitario) — `/admin`
-- **Resumen:** indicadores y solicitudes pendientes por aprobar.
-- **Actividades:** crear, editar y eliminar actividades; gestionar sus inscritos (agregar, aprobar,
-  rechazar o retirar estudiantes) respetando los cupos.
+- **Resumen:** indicadores, actividades más y menos concurridas, participación por categoría,
+  solicitudes pendientes por aprobar y **reporte descargable en CSV**.
+- **Actividades:** crear, editar y eliminar actividades, con días y horas por selectores (formato
+  24 h), foto opcional y ubicación marcada con un clic en el mapa; gestionar sus inscritos (agregar,
+  aprobar, rechazar o retirar estudiantes) respetando los cupos.
 - **Calendario:** crear, editar y eliminar eventos, opcionalmente ligados a una actividad.
-- **Usuarios:** registro de todos los perfiles con sus intereses, actividades, fecha de registro y
-  último ingreso.
+- **Usuarios:** registro de todos los perfiles con código, carrera, semestre, intereses,
+  actividades, fecha de registro y último ingreso.
 
 ## Tecnología
 
@@ -92,6 +99,10 @@ python run.py                      # abre http://127.0.0.1:5000
 
 - La base de datos (SQLite) se crea sola en `instance/campus_vive.db` y se llena con actividades y
   eventos de ejemplo la primera vez. Cada integrante tiene su propia base local; no se sube al repositorio.
+- Al arrancar, la app agrega a la base las columnas nuevas que falten, así que no hay que borrarla
+  cuando cambia el modelo.
+- Las fotos que sube el administrador se guardan en `app/static/img/actividades/subidas/` (fuera
+  del repositorio). Máximo 2 MB por foto; conviene subirlas ya livianas.
 - Los estudiantes se registran desde la pantalla de inicio de sesión.
 - La cuenta de administrador por defecto es `bienestar@unimilitar.edu.co`; para otro correo:
   `flask --app run crear-admin --correo nombre@unimilitar.edu.co`.
@@ -104,8 +115,7 @@ CREATE DATABASE campus_vive CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 ```powershell
 $env:DATABASE_URL = "mysql+pymysql://usuario:clave@localhost/campus_vive"
-flask --app run init-db
-flask --app run crear-admin
+flask --app run crear-admin        # las tablas se crean solas al arrancar
 ```
 
 ### Variables de entorno
@@ -125,16 +135,20 @@ python -m unittest discover tests
 
 ```
 app/
-  __init__.py      fábrica de la aplicación, filtros de plantilla
+  __init__.py      fábrica de la aplicación, filtros de plantilla y actualización de la base
   models.py        tablas: usuario, interes, actividad, inscripcion, evento
-  cli.py           comandos init-db y crear-admin
+  cli.py           comando crear-admin
   data/mock.py     categorías, novedades y datos de ejemplo
-  services/        lógica: catálogo (actividades/eventos) y sesión (acceso, intereses, inscripciones)
+  services/        catálogo (actividades/eventos), sesión (acceso, intereses, inscripciones)
+                   y directorio (datos académicos del estudiante)
   routes/          main (estudiante) · onboarding · auth · admin
   templates/       vistas Jinja2
-  static/          estilos (campus.css) y JavaScript
+  static/          estilos (campus.css), JavaScript e imágenes (mapa, fotos de actividades)
 tests/             pruebas de flujo
 ```
+
+Las fotos de ejemplo de las actividades son de Wikimedia Commons con licencia libre; autores y
+licencias en `app/static/img/actividades/CREDITOS.md`.
 
 ## Estado y próximos pasos
 
@@ -142,8 +156,12 @@ tests/             pruebas de flujo
 - [x] Registro, inicio de sesión y recorrido de bienvenida
 - [x] Inscripciones con control de cupos
 - [x] Panel de administración (actividades, calendario, inscritos, usuarios)
-- [ ] Mapa interactivo del campus Calle 100 (a la espera del plano)
-- [ ] Fotos de actividades subidas desde el panel
+- [x] Estadísticas de participación y reporte CSV
+- [x] Mapa del campus con la ubicación de cada actividad
+- [x] Fotos de actividades (de ejemplo y subidas desde el panel)
+- [x] Perfil del estudiante con datos académicos sincronizados (directorio de prueba)
+- [ ] Conectar el directorio real de la universidad
+- [ ] Página de créditos de las fotos al publicar
 - [ ] Protección CSRF en formularios antes del despliegue
 - [ ] Despliegue en la nube con MySQL
 

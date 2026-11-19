@@ -384,7 +384,7 @@ button.cv-mapa-pin { background: none; border: 0; padding: 0; cursor: pointer; }
 @media (max-width: 767.98px) {
   .cv-interests { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; }
   .cv-interest__blob { width: 80px; height: 72px; font-size: 2.2rem; }
-  .cv-arch { width: 92px; height: 130px; font-size: 2.2rem; }
+  .cv-arch { width: 92px; height: 130px; }
   .cv-arch--tall { height: 155px; }
   .cv-hello { padding: 3.2rem 1.2rem 1.5rem; }
   .cv-hello h1 { font-size: 2rem; }

@@ -85,7 +85,6 @@ class Actividad(db.Model):
     categoria = db.Column(db.String(30), nullable=False)
     descripcion = db.Column(db.String(255), nullable=False, default="")
     detalle = db.Column(db.Text, nullable=False, default="")
-    nivel = db.Column(db.String(40), nullable=False, default="Todos los niveles")  # ya no se usa; se deja para no migrar
     # Punto en img/mapas/campus_general.jpg, en % (izquierda, arriba); lo elige el admin.
     mapa_x = db.Column(db.Float)
     mapa_y = db.Column(db.Float)
