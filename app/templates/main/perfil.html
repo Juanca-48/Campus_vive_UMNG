@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Mi perfil{% endblock %}
+
+{% block content %}
+<div class="row g-4 justify-content-center">
+  <aside class="col-lg-4">
+    <div class="cv-card p-4 text-center h-100">
+      <div class="cv-avatar cv-avatar--xl d-inline-flex align-items-center justify-content-center overflow-hidden mb-3">
+        {% if usuario.foto %}<img src="{{ usuario.foto }}" alt="Foto de {{ usuario.nombre }}">{% else %}{{ usuario.iniciales }}{% endif %}
+      </div>
+      <h1 class="h3 mb-1">{{ usuario.nombre }}</h1>
+      <p class="cv-muted mb-2">{{ usuario.correo }}</p>
+      <span class="cv-status {{ 'cv-status--aprobada' if usuario.es_admin else 'cv-status--pendiente' }}">
+        {{ "Bienestar Universitario" if usuario.es_admin else "Estudiante" }}
+      </span>
+      <div class="d-grid gap-2 mt-4">
+        {% if usuario.es_admin %}
+          <a class="btn cv-btn-primary" href="{{ url_for('admin.panel') }}"><i class="bi bi-speedometer2"></i> Panel Bienestar</a>
+        {% endif %}
+        <a class="btn cv-btn-ghost" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</a>
+      </div>
+    </div>
+  </aside>
+
+  <section class="col-lg-8 d-flex flex-column gap-4">
+    {% if not usuario.es_admin %}
+    <div class="cv-card p-4">
+      <h2 class="h5 mb-3"><i class="bi bi-mortarboard text-cv-yellow"></i> Datos académicos</h2>
+      {% if usuario.codigo %}
+        <div class="cv-perfil-datos">
+          <div><small>Código</small><span>{{ usuario.codigo }}</span></div>
+          <div><small>Carrera</small><span>{{ usuario.carrera }}</span></div>
+          <div><small>Semestre</small><span>{{ usuario.semestre }}.º</span></div>
+          <div><small>Sede</small><span>Calle 100</span></div>
+        </div>
+        <p class="cv-muted small mt-3 mb-0"><i class="bi bi-arrow-repeat"></i>
+          Sincronizados con el directorio de la universidad en cada ingreso.</p>
+      {% else %}
+        <p class="cv-muted mb-0">Se cargarán desde el directorio de la universidad en tu próximo ingreso.</p>
+      {% endif %}
+    </div>
+
+    <div class="cv-card p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h5 mb-0"><i class="bi bi-heart text-cv-pink"></i> Mis intereses</h2>
+        <a class="cv-link small" href="{{ url_for('main.personaliza') }}">Editar</a>
+      </div>
+      {% for slug in usuario.categorias_interes %}{% set cat = categorias|selectattr("slug", "equalto", slug)|first %}
+        <span class="cv-chip cv-bg-{{ cat.color }} mb-1">{{ cat.nombre }}</span>
+      {% else %}<span class="cv-muted">Aún no eliges intereses.</span>{% endfor %}
+    </div>
+
+    <div class="cv-card p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h5 mb-0"><i class="bi bi-clipboard-check text-cv-blue"></i> Mis actividades</h2>
+        <a class="cv-link small" href="{{ url_for('main.mis_actividades') }}">Ver todas</a>
+      </div>
+      {% for ins in inscripciones %}
+        <div class="d-flex justify-content-between align-items-center py-1">
+          <span>{{ ins.actividad.nombre }}</span>
+          <span class="cv-status cv-status--{{ ins.estado|lower }}">{{ ins.estado }}</span>
+        </div>
+      {% else %}
+        <span class="cv-muted">Todavía no te inscribes a ninguna. <a class="cv-link" href="{{ url_for('main.descubre') }}">Descubre grupos</a></span>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="cv-card p-4">
+      <h2 class="h5 mb-3"><i class="bi bi-person-gear text-cv-green"></i> Cuenta</h2>
+      <div class="cv-perfil-datos">
+        <div><small>Miembro desde</small><span>{{ usuario.creado_en|local("%d/%m/%Y") }}</span></div>
+        <div><small>Último ingreso</small><span>{{ usuario.ultimo_ingreso|local("%d/%m/%Y %H:%M") if usuario.ultimo_ingreso else "—" }}</span></div>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}

@@ -18,21 +18,10 @@
         <i class="bi bi-bell"></i><span class="cv-dot"></span>
       </a>
       {% if usuario %}
-        <div class="dropdown">
-          <button class="cv-avatar dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-            {{ (usuario.nombre.split()|map('first')|join|upper)[:2] }}
-          </button>
-          <ul class="dropdown-menu dropdown-menu-end">
-            <li><span class="dropdown-item-text small text-secondary">{{ usuario.correo }}</span></li>
-            <li><a class="dropdown-item" href="{{ url_for('main.mis_actividades') }}">Mis actividades</a></li>
-            <li><a class="dropdown-item" href="{{ url_for('main.personaliza') }}">Mis intereses</a></li>
-            {% if usuario.rol == 'admin' %}
-              <li><a class="dropdown-item" href="{{ url_for('admin.panel') }}">Panel Bienestar</a></li>
-            {% endif %}
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Cerrar sesión</a></li>
-          </ul>
-        </div>
+        <a class="cv-avatar {{ 'is-active' if request.endpoint == 'main.perfil' }}" href="{{ url_for('main.perfil') }}"
+           aria-label="Mi perfil" title="Mi perfil">
+          {% if usuario.foto %}<img src="{{ usuario.foto }}" alt="">{% else %}{{ usuario.iniciales }}{% endif %}
+        </a>
       {% else %}
         <a class="btn cv-btn-outline btn-sm" href="{{ url_for('auth.login') }}">Ingresar</a>
       {% endif %}

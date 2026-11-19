@@ -1,6 +1,7 @@
 from datetime import timedelta, timezone
 
 from flask import Flask, render_template
+from sqlalchemy import inspect, text
 
 from config import Config
 from app import models  # noqa: F401  (registra los modelos antes de create_all)
@@ -16,6 +17,7 @@ def create_app(config_class=Config):
     db.init_app(app)
     with app.app_context():
         db.create_all()  # solo crea las tablas que falten
+        _agregar_columnas_faltantes()
         catalogo.sembrar_si_vacio()
     registrar_comandos(app)
     app.before_request(sesion.cargar_usuario)
@@ -59,6 +61,19 @@ def create_app(config_class=Config):
         return render_template("404.html"), 404
 
     return app
+
+
+def _agregar_columnas_faltantes():
+    """create_all no modifica tablas existentes: agrega las columnas nuevas (que admiten nulo)
+    para no tener que borrar la base de datos local cada vez que el modelo crece."""
+    inspector = inspect(db.engine)
+    for tabla in db.metadata.sorted_tables:
+        existentes = {c["name"] for c in inspector.get_columns(tabla.name)}
+        for col in tabla.columns:
+            if col.name not in existentes and col.nullable:
+                tipo = col.type.compile(db.engine.dialect)
+                db.session.execute(text(f"ALTER TABLE {tabla.name} ADD COLUMN {col.name} {tipo}"))
+    db.session.commit()
 
 
 BOGOTA = timezone(timedelta(hours=-5))

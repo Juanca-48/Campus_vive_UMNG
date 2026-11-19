@@ -83,7 +83,15 @@ h1, h2, h3 { font-weight: 700; }
   width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--cv-pink);
   background: transparent; color: #fff; font-weight: 600; font-size: .9rem;
 }
-.cv-avatar.dropdown-toggle::after { display: none; }
+a.cv-avatar { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; overflow: hidden; }
+a.cv-avatar:hover, a.cv-avatar.is-active { background: var(--cv-pink); color: #fff; }
+.cv-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.cv-avatar--xl { width: 160px; height: 160px; border-width: 4px; font-size: 3.4rem; }
+
+/* --- perfil -------------------------------------------------------------- */
+.cv-perfil-datos { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1rem; }
+.cv-perfil-datos small { display: block; color: var(--cv-muted); font-size: .8rem; }
+.cv-perfil-datos span { font-weight: 600; word-break: break-word; }
 
 /* --- botones ------------------------------------------------------------- */
 .cv-btn-primary {
@@ -210,13 +218,23 @@ h1, h2, h3 { font-weight: 700; }
 .cv-panel { background: rgba(17, 36, 90, .85); border: 1px solid var(--cv-line); border-radius: 22px; padding: 1.2rem; margin-bottom: 2rem; text-align: left; }
 .cv-panel__title { display: flex; align-items: center; gap: .5rem; font-weight: 600; font-size: 1.1rem; }
 
-.cv-map-soon {
-  border: 2px dashed rgba(255,255,255,.3); border-radius: 22px; padding: 3rem 1.5rem; margin: 0 auto 2rem;
-  max-width: 720px; text-align: center; background: rgba(17, 36, 90, .6); position: relative; z-index: 1;
+/* Mapa: una sola foto del campus y el marcador encima (la punta queda sobre el punto). */
+.cv-mapa { position: relative; }
+.cv-mapa img { display: block; width: 100%; }
+.cv-mapa-pin {
+  position: absolute; transform: translate(-50%, -100%); line-height: 1;
+  font-size: clamp(1.8rem, 5vw, 3.2rem); color: #e53935;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .55));
 }
-.cv-map-soon > i { font-size: 3.5rem; color: var(--cv-pink); }
-.cv-map-soon h2 { font-size: 1.4rem; margin-top: .8rem; }
-.cv-map-soon p { color: var(--cv-muted); }
+button.cv-mapa-pin { background: none; border: 0; padding: 0; cursor: pointer; }
+.cv-mapa-pin__nombre {
+  display: none; position: absolute; top: calc(100% + 4px); left: 50%; transform: translateX(-50%);
+  width: max-content; max-width: 12rem; line-height: 1.25; text-align: center;
+  font-size: .8rem; font-weight: 600; padding: .3rem .7rem; border-radius: 14px;
+  background: #fff; color: var(--cv-navy);
+}
+.cv-mapa-pin:hover, .cv-mapa-pin.is-open { z-index: 2; }
+.cv-mapa-pin:hover .cv-mapa-pin__nombre, .cv-mapa-pin.is-open .cv-mapa-pin__nombre { display: block; }
 
 .cv-progress { display: flex; justify-content: center; gap: .9rem; margin-top: 1.8rem; }
 .cv-progress__dot { width: 34px; height: 6px; border-radius: 6px; background: #c9cfdf; border: 0; padding: 0; }

@@ -4,6 +4,7 @@ import unittest
 from app import create_app
 from app.extensions import db
 from app.models import ROL_ADMIN, Actividad, Evento, Inscripcion, Usuario
+from app.services import directorio
 from config import Config
 
 
@@ -110,6 +111,58 @@ class CampusViveTest(unittest.TestCase):
         for texto in ("ana@unimilitar.edu.co", "nuevo@unimilitar.edu.co", "admin@unimilitar.edu.co",
                       "Sin completar bienvenida"):
             self.assertIn(texto, html)
+
+    def test_mapa_marca_la_actividad_aunque_se_renombre(self):
+        self.login("admin@unimilitar.edu.co", "adminclave")
+        self.c.post("/admin/actividades/1/editar",
+                    data={"nombre": "Fútbol Mixto", "categoria": "deporte", "cupos_total": "20"})
+        html = self.c.get("/mapa?actividad=futbol-mixto").get_data(as_text=True)
+        self.assertIn("left: 25.2%; top: 60.0%", html)
+        self.assertNotIn("cv-mapa-pin", self.c.get("/mapa").get_data(as_text=True))
+
+    def test_bienvenida_muestra_el_mapa_con_un_marcador_por_lugar(self):
+        self.registrar("Ana", "ana@unimilitar.edu.co", onboarding=False)
+        self.login("ana@unimilitar.edu.co")
+        html = self.c.get("/bienvenida").get_data(as_text=True)
+        self.assertEqual(html.count('class="cv-mapa-pin"'), 5)  # 10 actividades en 5 lugares
+        self.assertIn('aria-label="Coro UMNG, Fotografía, Guitarra Acústica"', html)
+        self.assertIn('data-categorias="cultura artes"', html)  # para filtrar por intereses
+
+    def test_datos_academicos_se_sincronizan_al_ingresar(self):
+        self.registrar("Ana", "ana@unimilitar.edu.co")
+        ana = Usuario.query.filter_by(correo="ana@unimilitar.edu.co").one()
+        esperado = directorio.consultar("ana@unimilitar.edu.co")
+        self.assertEqual((ana.codigo, ana.carrera, ana.semestre),
+                         (esperado["codigo"], esperado["carrera"], esperado["semestre"]))
+        self.assertTrue(1 <= ana.semestre <= 10)
+
+        ana.carrera = "Desactualizada"
+        db.session.commit()
+        self.login("ana@unimilitar.edu.co")
+        db.session.refresh(ana)
+        self.assertEqual(ana.carrera, esperado["carrera"])  # el ingreso la vuelve a traer
+        self.c.get("/logout")
+
+        self.login("admin@unimilitar.edu.co", "adminclave")
+        self.assertIsNone(Usuario.query.filter_by(rol=ROL_ADMIN).one().codigo)
+        self.assertIn(ana.codigo, self.c.get("/admin/usuarios").get_data(as_text=True))
+
+    def test_perfil_muestra_datos_y_foto(self):
+        self.registrar("Ana María Rojas", "ana@unimilitar.edu.co")
+        self.login("ana@unimilitar.edu.co")
+        ana = Usuario.query.filter_by(correo="ana@unimilitar.edu.co").one()
+        html = self.c.get("/perfil").get_data(as_text=True)
+        for texto in (ana.codigo, ana.carrera, "AM", 'href="/perfil"'):
+            self.assertIn(texto, html)
+        ana.foto = "https://fotos.ejemplo/ana.jpg"
+        db.session.commit()
+        self.assertIn('src="https://fotos.ejemplo/ana.jpg"', self.c.get("/perfil").get_data(as_text=True))
+
+    def test_reporte_csv(self):
+        self.login("admin@unimilitar.edu.co", "adminclave")
+        r = self.c.get("/admin/reporte.csv")
+        self.assertEqual(r.mimetype, "text/csv")
+        self.assertIn("Fútbol UMNG", r.get_data().decode("utf-8-sig"))
 
 
 if __name__ == "__main__":

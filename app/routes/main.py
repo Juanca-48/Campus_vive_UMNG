@@ -97,6 +97,11 @@ def mapa():
     return render_template("main/mapa.html", act=act, actividades=catalogo.get_actividades())
 
 
+@bp.route("/perfil")
+def perfil():
+    return render_template("main/perfil.html", inscripciones=sesion.get_inscripciones())
+
+
 @bp.route("/novedades")
 def novedades():
     return render_template("main/novedades.html", novedades=catalogo.get_novedades())

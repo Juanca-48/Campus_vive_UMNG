@@ -8,8 +8,6 @@ from datetime import date, time
 
 from flask import Blueprint, Response, abort, flash, redirect, render_template, request, url_for
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
-
 from app.extensions import db
 from app.models import (ESTADO_APROBADA, ESTADO_PENDIENTE, ESTADO_RECHAZADA, ROL_ESTUDIANTE,
                         Actividad, Evento, Inscripcion, Usuario)
@@ -144,10 +142,12 @@ def reporte_csv():
 
     # 4. Detalle de inscripciones
     writer.writerow(["DETALLE DE INSCRIPCIONES"])
-    writer.writerow(["Actividad", "Estudiante", "Correo", "Estado", "Fecha de solicitud"])
+    writer.writerow(["Actividad", "Estudiante", "Correo", "Codigo", "Carrera", "Semestre",
+                     "Estado", "Fecha de solicitud"])
     for ins in inscripciones:
+        u = ins.usuario
         writer.writerow([
-            ins.actividad.nombre, ins.usuario.nombre, ins.usuario.correo,
+            ins.actividad.nombre, u.nombre, u.correo, u.codigo or "", u.carrera or "", u.semestre or "",
             ins.estado, ins.creada_en.strftime("%Y-%m-%d %H:%M"),
         ])
 

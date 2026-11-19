@@ -12,17 +12,23 @@ from app.models import ESTADO_APROBADA, ESTADO_PENDIENTE, Actividad, Evento, Ins
 
 _CATEGORIAS = {c["slug"]: c for c in mock.CATEGORIAS}
 
-MAPAS_POR_ACTIVIDAD = {
-    "futbol-umng": "img/mapas/MapaCancha1.png",
-    "teatro-en-escena": "img/mapas/MapaCancha2.png",
-    "arte-y-color": "img/mapas/MapaArtes.png",
-    "explora-naturaleza": "img/mapas/MapaArtes.png",
-    "danza-contemporanea": "img/mapas/MapaGym.png",
-    "fotografia": "img/mapas/MapaFoto.png",
-    "yoga-y-bienestar": "img/mapas/MapaGym.png",
-    "guitarra-acustica": "img/mapas/MapaFoto.png",
-    "baloncesto": "img/mapas/MapaCancha2.png",
-    "coro-umng": "img/mapas/MapaFoto.png",
+# Puntos sobre img/mapas/campus_general.jpg, en % (izquierda, arriba), por id de actividad
+# (el id no cambia al renombrarla; el slug sí).
+# shortcut: solo las actividades de ejemplo tienen punto; las nuevas muestran el campus sin
+# marcador. Si hace falta, agregar x/y a Actividad y elegirlos desde el panel.
+_CANCHA_1, _CANCHA_2, _GIMNASIO = (25.2, 60.0), (33.2, 59.0), (28.5, 16.4)
+_ARTES, _FOTO = (65.3, 52.6), (54.8, 31.4)
+PUNTOS_MAPA = {
+    1: _CANCHA_1,   # Fútbol UMNG
+    2: _CANCHA_2,   # Teatro en Escena
+    3: _ARTES,      # Arte & Color
+    4: _ARTES,      # Explora Naturaleza
+    5: _GIMNASIO,   # Danza Contemporánea
+    6: _FOTO,       # Fotografía
+    7: _GIMNASIO,   # Yoga y Bienestar
+    8: _FOTO,       # Guitarra Acústica
+    9: _CANCHA_2,   # Baloncesto
+    10: _FOTO,      # Coro UMNG
 }
 
 def _conteos():
@@ -46,7 +52,7 @@ def _a_dict(a, conteos):
         "miembros": c.get(ESTADO_APROBADA, 0), "pendientes": c.get(ESTADO_PENDIENTE, 0),
         "horario": [h for h in a.horario.splitlines() if h.strip()],
         "responsable": a.responsable, "ubicacion": {"nombre": a.lugar, "sede": a.sede},
-        "mapa": MAPAS_POR_ACTIVIDAD.get(a.slug, "img/mapas/campus_general.jpg"),
+        "punto_mapa": PUNTOS_MAPA.get(a.id),
         "etiqueta": a.etiqueta, "destacada": a.destacada,
     }
 

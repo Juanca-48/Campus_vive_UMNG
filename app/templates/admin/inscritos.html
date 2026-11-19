@@ -26,7 +26,8 @@
       <tbody>
         {% for ins in inscripciones %}
           <tr>
-            <td>{{ ins.usuario.nombre }}<br><small class="cv-muted">{{ ins.usuario.correo }}</small></td>
+            <td>{{ ins.usuario.nombre }}<br><small class="cv-muted">{{ ins.usuario.correo }}</small>
+              {% if ins.usuario.codigo %}<br><small class="cv-muted">{{ ins.usuario.datos_academicos }}</small>{% endif %}</td>
             <td>{{ ins.creada_en|local("%d/%m/%Y") }}</td>
             <td><span class="cv-status cv-status--{{ ins.estado|lower }}">{{ ins.estado }}</span></td>
             <td class="text-end text-nowrap">

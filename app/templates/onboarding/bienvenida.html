@@ -71,14 +71,25 @@
     </button>
   </section>
 
-  {# Paso 4 · Mapa (pendiente de plano del campus) #}
+  {# Paso 4 · Mapa: un marcador por lugar con actividades #}
   <section class="cv-step" data-step="3" aria-label="Ubica tu actividad">
     {{ titulo_seccion("bi-geo-alt", "Ubica tu", "actividad",
                       "Encuentra el <span class='text-cv-pink'>camino más rápido</span> dentro del campus.") }}
-    <div class="cv-map-soon">
-      <i class="bi bi-map"></i>
-      <h2>Mapa interactivo del campus Calle 100</h2>
-      <p>Muy pronto podrás ver dónde queda cada actividad y cómo llegar.</p>
+    <div class="cv-card p-3 mx-auto mb-4" style="max-width: 820px;">
+      <div class="cv-mapa">
+        <img src="{{ url_for('static', filename='img/mapas/campus_general.jpg') }}"
+             alt="Mapa del campus Calle 100" class="img-fluid rounded-3">
+        {% for punto, grupo in actividades|selectattr("punto_mapa")|groupby("punto_mapa") %}
+          {% set nombres = grupo|map(attribute="nombre")|join(", ") %}
+          <button type="button" class="cv-mapa-pin" aria-label="{{ nombres }}"
+                  data-categorias="{{ grupo|map(attribute='categoria')|unique|join(' ') }}"
+                  style="left: {{ punto[0] }}%; top: {{ punto[1] }}%">
+            <i class="bi bi-geo-alt-fill" aria-hidden="true"></i><span class="cv-mapa-pin__nombre">{{ nombres }}</span>
+          </button>
+        {% endfor %}
+      </div>
+      <p class="cv-muted small mt-3 mb-0">Toca un marcador para ver qué actividades hay ahí.
+        Luego, desde cada actividad, usa <strong>Cómo llegar</strong>.</p>
     </div>
     <button type="submit" class="btn cv-btn-primary cv-btn-wide">
       Iniciar <i class="bi bi-arrow-right"></i>

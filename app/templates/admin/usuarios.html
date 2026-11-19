@@ -5,7 +5,7 @@
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
   <h2 class="h5 mb-0">Perfiles registrados ({{ usuarios|length }})</h2>
   <input class="form-control cv-input" style="max-width: 280px" type="search" id="buscarUsuario"
-         placeholder="Buscar por nombre o correo…" aria-label="Buscar usuario">
+         placeholder="Buscar por nombre, correo, código o carrera…" aria-label="Buscar usuario">
 </div>
 <div class="cv-card p-0 overflow-hidden">
   <div class="table-responsive">
@@ -15,8 +15,9 @@
       </thead>
       <tbody>
         {% for u in usuarios %}
-          <tr data-buscar="{{ (u.nombre ~ ' ' ~ u.correo)|lower }}">
-            <td>{{ u.nombre }}<br><small class="cv-muted">{{ u.correo }}</small></td>
+          <tr data-buscar="{{ (u.nombre ~ ' ' ~ u.correo ~ ' ' ~ u.datos_academicos)|lower }}">
+            <td>{{ u.nombre }}<br><small class="cv-muted">{{ u.correo }}</small>
+              {% if u.codigo %}<br><small class="cv-muted">{{ u.datos_academicos }}</small>{% endif %}</td>
             <td><span class="cv-status {{ 'cv-status--aprobada' if u.es_admin else 'cv-status--pendiente' }}">{{ "Admin" if u.es_admin else "Estudiante" }}</span></td>
             <td>
               {% for slug in u.categorias_interes %}{% set cat = categorias|selectattr("slug", "equalto", slug)|first %}

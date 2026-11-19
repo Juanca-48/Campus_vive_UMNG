@@ -10,7 +10,7 @@ from flask import flash, g, redirect, request, session, url_for
 
 from app.extensions import db
 from app.models import Inscripcion, Interes, Usuario
-from app.services import catalogo
+from app.services import catalogo, directorio
 
 DOMINIO_INSTITUCIONAL = "@unimilitar.edu.co"
 
@@ -36,6 +36,10 @@ def iniciar_sesion(usuario):
     session.clear()  # evita reutilizar una sesión previa (fijación de sesión)
     session["usuario_id"] = usuario.id
     usuario.ultimo_ingreso = datetime.now(timezone.utc)
+    datos = None if usuario.es_admin else directorio.consultar(usuario.correo)
+    if datos:
+        usuario.codigo, usuario.carrera, usuario.semestre = datos["codigo"], datos["carrera"], datos["semestre"]
+        usuario.foto = datos["foto"]
     db.session.commit()
     g.usuario = usuario
 

@@ -20,10 +20,15 @@
 </div>
 
 <div class="cv-card p-3 mx-auto text-center" style="max-width: 820px;">
-  {% set ruta_mapa = act.mapa if act else 'img/mapas/campus_general.jpg' %}
-  <img src="{{ url_for('static', filename=ruta_mapa) }}"
-       alt="Mapa de {{ act.nombre if act else 'Campus UMNG' }}"
-       class="img-fluid rounded-3">
+  <div class="cv-mapa">
+    <img src="{{ url_for('static', filename='img/mapas/campus_general.jpg') }}"
+         alt="Mapa de {{ act.nombre if act else 'Campus UMNG' }}"
+         class="img-fluid rounded-3">
+    {% if act and act.punto_mapa %}
+      <i class="bi bi-geo-alt-fill cv-mapa-pin" aria-hidden="true"
+         style="left: {{ act.punto_mapa[0] }}%; top: {{ act.punto_mapa[1] }}%"></i>
+    {% endif %}
+  </div>
   {% if act %}
     <p class="mt-3 mb-0 cv-muted">
       <strong>{{ act.nombre }}</strong> · {{ act.ubicacion.nombre }} ({{ act.ubicacion.sede }})

@@ -32,6 +32,11 @@ class Usuario(db.Model):
     onboarding_completo = db.Column(db.Boolean, nullable=False, default=False)
     creado_en = db.Column(db.DateTime(timezone=True), nullable=False, default=_ahora)
     ultimo_ingreso = db.Column(db.DateTime(timezone=True))
+    # Datos académicos: vienen del directorio institucional en cada ingreso (services/directorio.py).
+    codigo = db.Column(db.String(20))
+    carrera = db.Column(db.String(120))
+    semestre = db.Column(db.Integer)
+    foto = db.Column(db.String(255))  # URL de la foto institucional
 
     intereses = db.relationship("Interes", backref="usuario", cascade="all, delete-orphan")
     inscripciones = db.relationship(
@@ -48,6 +53,14 @@ class Usuario(db.Model):
     @property
     def es_admin(self):
         return self.rol == ROL_ADMIN
+
+    @property
+    def iniciales(self):
+        return "".join(p[0] for p in self.nombre.split()[:2]).upper()
+
+    @property
+    def datos_academicos(self):
+        return f"{self.codigo} · {self.carrera} · {self.semestre}.º semestre" if self.codigo else ""
 
     @property
     def categorias_interes(self):

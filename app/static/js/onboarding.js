@@ -20,8 +20,28 @@
     });
   }
 
+  // En el mapa deja solo los lugares con alguna categoría elegida (todos si no eligió ninguna).
+  const pines = [...form.querySelectorAll(".cv-mapa-pin")];
+  function filtrarMapa() {
+    const elegidos = intereses();
+    pines.forEach((pin) => {
+      const coincide = elegidos.length === 0 || pin.dataset.categorias.split(" ").some((c) => elegidos.includes(c));
+      pin.classList.toggle("d-none", !coincide);
+      pin.classList.remove("is-open");
+    });
+  }
+  // Tocar un marcador muestra sus actividades (el hover no existe en pantallas táctiles).
+  pines.forEach((pin) =>
+    pin.addEventListener("click", () => {
+      const abrir = !pin.classList.contains("is-open");
+      pines.forEach((p) => p.classList.remove("is-open"));
+      pin.classList.toggle("is-open", abrir);
+    })
+  );
+
   function irA(indice) {
     if (indice === 2) filtrarRecomendadas();
+    if (indice === 3) filtrarMapa();
     pasos.forEach((p, i) => p.classList.toggle("is-active", i === indice));
     puntos.forEach((p, i) => p.classList.toggle("is-active", i === indice));
     window.scrollTo({ top: 0, behavior: "smooth" });
