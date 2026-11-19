@@ -1,5 +1,8 @@
 """Pruebas de flujo.  Ejecutar:  python -m unittest discover tests"""
+import io
+import tempfile
 import unittest
+from pathlib import Path
 
 from app import create_app
 from app.extensions import db
@@ -16,6 +19,8 @@ class TestConfig(Config):
 class CampusViveTest(unittest.TestCase):
     def setUp(self):
         self.app = create_app(TestConfig)
+        self.fotos = tempfile.TemporaryDirectory()  # las fotos subidas en pruebas no tocan static/
+        self.app.config["CARPETA_FOTOS"] = Path(self.fotos.name)
         self.ctx = self.app.app_context()
         self.ctx.push()
         admin = Usuario(nombre="Bienestar", correo="admin@unimilitar.edu.co", rol=ROL_ADMIN)
@@ -28,6 +33,7 @@ class CampusViveTest(unittest.TestCase):
         db.session.remove()
         db.drop_all()
         self.ctx.pop()
+        self.fotos.cleanup()
 
     def registrar(self, nombre, correo, onboarding=True):
         self.c.post("/registro", data={"nombre": nombre, "correo": correo,
@@ -54,14 +60,14 @@ class CampusViveTest(unittest.TestCase):
     def test_crud_actividad_y_slug_unico(self):
         self.login("admin@unimilitar.edu.co", "adminclave")
         datos = {"nombre": "Ajedrez Ágil", "categoria": "recreacion", "cupos_total": "2",
-                 "horario": "Lunes 2 p.m.\n\nMartes 2 p.m."}
+                 "dias": ["Martes", "Lunes"], "desde": "12:00", "hasta": "14:30"}
         self.c.post("/admin/actividades/nueva", data=datos)
         self.c.post("/admin/actividades/nueva", data=datos)
         slugs = [a.slug for a in Actividad.query.filter_by(nombre="Ajedrez Ágil")]
         self.assertEqual(sorted(slugs), ["ajedrez-agil", "ajedrez-agil-2"])
 
         a = Actividad.query.filter_by(slug="ajedrez-agil").one()
-        self.assertEqual(a.horario, "Lunes 2 p.m.\nMartes 2 p.m.")
+        self.assertEqual(a.horario, "Lunes 12:00 m. – 2:30 p.m.\nMartes 12:00 m. – 2:30 p.m.")  # orden de la semana
         r = self.c.post(f"/admin/actividades/{a.id}/editar", data={**datos, "cupos_total": "0"})
         self.assertIn("entre 1 y 1000", r.get_data(as_text=True))
         self.c.post(f"/admin/actividades/{a.id}/editar", data={**datos, "nombre": "Ajedrez", "destacada": "on"})
@@ -119,6 +125,71 @@ class CampusViveTest(unittest.TestCase):
         html = self.c.get("/mapa?actividad=futbol-mixto").get_data(as_text=True)
         self.assertIn("left: 25.2%; top: 60.0%", html)
         self.assertNotIn("cv-mapa-pin", self.c.get("/mapa").get_data(as_text=True))
+        self.assertIn("img/actividades/futbol-umng.jpg",  # la foto también sobrevive al renombre
+                      self.c.get("/actividad/futbol-mixto").get_data(as_text=True))
+
+    def test_admin_ubica_la_actividad_en_el_mapa(self):
+        self.login("admin@unimilitar.edu.co", "adminclave")
+        form = self.c.get("/admin/actividades/nueva").get_data(as_text=True)
+        self.assertNotIn('name="nivel"', form)
+        self.assertIn('id="mapaAdmin"', form)
+
+        datos = {"nombre": "Ajedrez", "categoria": "recreacion", "cupos_total": "10"}
+        r = self.c.post("/admin/actividades/nueva", data={**datos, "mapa_x": "150", "mapa_y": "20"})
+        self.assertIn("punto del mapa no es válido", r.get_data(as_text=True))
+        self.c.post("/admin/actividades/nueva", data={**datos, "mapa_x": "40.04", "mapa_y": "22.5"})
+        a = Actividad.query.filter_by(slug="ajedrez").one()
+        self.assertEqual((a.mapa_x, a.mapa_y), (40.0, 22.5))
+        self.c.get("/logout")
+
+        self.registrar("Ana", "ana@unimilitar.edu.co")
+        self.login("ana@unimilitar.edu.co")
+        self.assertIn("left: 40.0%; top: 22.5%", self.c.get("/mapa?actividad=ajedrez").get_data(as_text=True))
+        self.assertNotIn("Nivel", self.c.get("/actividad/ajedrez").get_data(as_text=True))
+
+    def test_horario_con_selectores(self):
+        self.login("admin@unimilitar.edu.co", "adminclave")
+        base = {"categoria": "cultura", "cupos_total": "10"}
+        # Danza (id 5): mismas horas lunes y jueves → los selectores vienen marcados.
+        form = self.c.get("/admin/actividades/5/editar").get_data(as_text=True)
+        self.assertIn('value="Lunes" class="visually-hidden" checked', form)
+        self.assertIn('<option value="18:00" selected>', form)
+        # Fin antes del inicio → error y no se guarda.
+        r = self.c.post("/admin/actividades/5/editar", data={**base, "nombre": "Danza Contemporánea",
+                        "dias": ["Lunes"], "desde": "18:00", "hasta": "17:00"})
+        self.assertIn("posterior a la de inicio", r.get_data(as_text=True))
+        # Yoga (id 7) tiene horas distintas por día y Explora (id 4) texto libre: sin días se conservan.
+        for id_, nombre in [(7, "Yoga y Bienestar"), (4, "Explora Naturaleza")]:
+            antes = db.session.get(Actividad, id_).horario
+            self.assertIn("Horario actual", self.c.get(f"/admin/actividades/{id_}/editar").get_data(as_text=True))
+            self.c.post(f"/admin/actividades/{id_}/editar", data={**base, "nombre": nombre})
+            self.assertEqual(db.session.get(Actividad, id_).horario, antes)
+
+    def test_foto_opcional_de_actividad(self):
+        self.login("admin@unimilitar.edu.co", "adminclave")
+        datos = {"nombre": "Ajedrez", "categoria": "recreacion", "cupos_total": "10"}
+        r = self.c.post("/admin/actividades/nueva", data={**datos, "foto": (io.BytesIO(b"<script>"), "x.jpg")},
+                        content_type="multipart/form-data")
+        self.assertIn("JPG, PNG o WEBP", r.get_data(as_text=True))  # se mira el contenido, no el nombre
+        self.c.post("/admin/actividades/nueva", content_type="multipart/form-data",
+                    data={**datos, "foto": (io.BytesIO(b"\xff\xd8\xff" + b"0" * 50), "mi foto.jpg")})
+        a = Actividad.query.filter_by(slug="ajedrez").one()
+        self.assertRegex(a.imagen, r"^subidas/[0-9a-f]{16}\.jpg$")
+        primera = Path(self.fotos.name) / a.imagen
+        self.assertTrue(primera.exists())
+
+        self.c.post(f"/admin/actividades/{a.id}/editar", content_type="multipart/form-data",
+                    data={**datos, "foto": (io.BytesIO(b"\x89PNG\r\n\x1a\n" + b"0" * 50), "otra.png")})
+        db.session.refresh(a)
+        self.assertTrue(a.imagen.endswith(".png"))
+        self.assertFalse(primera.exists())  # la foto reemplazada se borra
+        self.c.post(f"/admin/actividades/{a.id}/editar", data={**datos, "quitar_foto": "on"})
+        db.session.refresh(a)
+        self.assertIsNone(a.imagen)
+        self.assertEqual(list(Path(self.fotos.name, "subidas").iterdir()), [])
+        # Sin foto subida, las de ejemplo siguen saliendo.
+        self.assertIn("img/actividades/danza-contemporanea.jpg",
+                      self.c.get("/admin/actividades/5/editar").get_data(as_text=True))
 
     def test_bienvenida_muestra_el_mapa_con_un_marcador_por_lugar(self):
         self.registrar("Ana", "ana@unimilitar.edu.co", onboarding=False)

@@ -6,3 +6,4 @@ instance/
 *.db
 docs/
 CLAUDE.md
+app/static/img/actividades/subidas/

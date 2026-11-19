@@ -85,7 +85,11 @@ class Actividad(db.Model):
     categoria = db.Column(db.String(30), nullable=False)
     descripcion = db.Column(db.String(255), nullable=False, default="")
     detalle = db.Column(db.Text, nullable=False, default="")
-    nivel = db.Column(db.String(40), nullable=False, default="Todos los niveles")
+    nivel = db.Column(db.String(40), nullable=False, default="Todos los niveles")  # ya no se usa; se deja para no migrar
+    # Punto en img/mapas/campus_general.jpg, en % (izquierda, arriba); lo elige el admin.
+    mapa_x = db.Column(db.Float)
+    mapa_y = db.Column(db.Float)
+    imagen = db.Column(db.String(255))  # foto subida por el admin, relativa a static/img/actividades/
     cupos_total = db.Column(db.Integer, nullable=False, default=20)
     horario = db.Column(db.Text, nullable=False, default="")  # una franja por línea
     responsable = db.Column(db.String(120), nullable=False, default="")

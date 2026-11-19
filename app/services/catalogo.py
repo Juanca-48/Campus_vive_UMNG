@@ -12,10 +12,8 @@ from app.models import ESTADO_APROBADA, ESTADO_PENDIENTE, Actividad, Evento, Ins
 
 _CATEGORIAS = {c["slug"]: c for c in mock.CATEGORIAS}
 
-# Puntos sobre img/mapas/campus_general.jpg, en % (izquierda, arriba), por id de actividad
-# (el id no cambia al renombrarla; el slug sí).
-# shortcut: solo las actividades de ejemplo tienen punto; las nuevas muestran el campus sin
-# marcador. Si hace falta, agregar x/y a Actividad y elegirlos desde el panel.
+# Puntos iniciales de las actividades de ejemplo, en % sobre img/mapas/campus_general.jpg.
+# Se usan mientras el admin no ubique la actividad en el mapa (Actividad.mapa_x / mapa_y).
 _CANCHA_1, _CANCHA_2, _GIMNASIO = (25.2, 60.0), (33.2, 59.0), (28.5, 16.4)
 _ARTES, _FOTO = (65.3, 52.6), (54.8, 31.4)
 PUNTOS_MAPA = {
@@ -31,6 +29,15 @@ PUNTOS_MAPA = {
     10: _FOTO,      # Coro UMNG
 }
 
+# Fotos de ejemplo en static/img/actividades/ (créditos en CREDITOS.md), por id de actividad.
+# La que suba el admin (Actividad.imagen) tiene prioridad; sin ninguna se ve el degradado.
+FOTOS = {
+    1: "futbol-umng.jpg", 2: "teatro-en-escena.jpg", 3: "arte-y-color.jpg", 4: "explora-naturaleza.jpg",
+    5: "danza-contemporanea.jpg", 6: "fotografia.jpg", 7: "yoga-y-bienestar.jpg", 8: "guitarra-acustica.jpg",
+    9: "baloncesto.jpg", 10: "coro-umng.jpg",
+}
+
+
 def _conteos():
     """{actividad_id: {estado: n}} en una sola consulta."""
     filas = (db.session.query(Inscripcion.actividad_id, Inscripcion.estado, func.count())
@@ -41,18 +48,25 @@ def _conteos():
     return conteos
 
 
+def punto_mapa(a):
+    """(x, y) en % del lugar de la actividad: el que eligió el admin o el de ejemplo; None si no hay."""
+    if a.mapa_x is not None and a.mapa_y is not None:
+        return (a.mapa_x, a.mapa_y)
+    return PUNTOS_MAPA.get(a.id)
+
+
 def _a_dict(a, conteos):
     c = conteos.get(a.id, {})
     ocupados = c.get(ESTADO_APROBADA, 0) + c.get(ESTADO_PENDIENTE, 0)  # las pendientes reservan cupo
     cat = _CATEGORIAS[a.categoria]
     return {
         "id": a.id, "slug": a.slug, "nombre": a.nombre, "categoria": a.categoria, "cat": cat,
-        "icono": cat["icono"], "descripcion": a.descripcion, "detalle": a.detalle, "nivel": a.nivel,
+        "icono": cat["icono"], "descripcion": a.descripcion, "detalle": a.detalle,
         "cupos_total": a.cupos_total, "cupos_disponibles": max(a.cupos_total - ocupados, 0),
         "miembros": c.get(ESTADO_APROBADA, 0), "pendientes": c.get(ESTADO_PENDIENTE, 0),
         "horario": [h for h in a.horario.splitlines() if h.strip()],
         "responsable": a.responsable, "ubicacion": {"nombre": a.lugar, "sede": a.sede},
-        "punto_mapa": PUNTOS_MAPA.get(a.id),
+        "punto_mapa": punto_mapa(a), "imagen": a.imagen or FOTOS.get(a.id),
         "etiqueta": a.etiqueta, "destacada": a.destacada,
     }
 
@@ -116,7 +130,7 @@ def sembrar_si_vacio():
         # Se conserva el id del ejemplo para no romper inscripciones previas.
         db.session.add(Actividad(
             id=a["id"], slug=a["slug"], nombre=a["nombre"], categoria=a["categoria"],
-            descripcion=a["descripcion"], detalle=a["detalle"], nivel=a["nivel"],
+            descripcion=a["descripcion"], detalle=a["detalle"],
             cupos_total=a["cupos_total"], horario="\n".join(a["horario"]),
             responsable=a["responsable"], lugar=u["nombre"], sede=u["sede"],
             etiqueta=a["etiqueta"], destacada=a["destacada"],

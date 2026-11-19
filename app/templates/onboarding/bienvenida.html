@@ -6,8 +6,6 @@
 {% block main_class %}cv-stage{% endblock %}
 
 {% block content %}
-{% include "partials/_brushes.html" %}
-
 <div class="cv-umng">
   <i class="bi bi-shield-fill-check"></i>
   <span>UNIVERSIDAD MILITAR<br>NUEVA GRANADA</span>
@@ -18,10 +16,12 @@
   <input type="hidden" name="next" value="">
   {# Paso 1 · Bienvenida #}
   <section class="cv-step is-active" data-step="0" aria-label="Bienvenida">
-    <div class="cv-arches">
-      <div class="cv-arch cv-bg-pink"><i class="bi bi-emoji-laughing"></i></div>
-      <div class="cv-arch cv-arch--tall cv-bg-yellow"><i class="bi bi-dribbble"></i></div>
-      <div class="cv-arch cv-bg-blue"><i class="bi bi-music-note-beamed"></i></div>
+    {# Fotos recortadas de los mockups del pitch (docs/PROYECTO GIP.pdf); el icono ya viene en la foto. #}
+    <div class="cv-arches" aria-hidden="true">
+      {% for foto, clase in [("cultura", "cv-bg-pink"), ("deporte", "cv-arch--tall cv-bg-yellow"), ("artes", "cv-bg-blue")] %}
+        <div class="cv-arch {{ clase }}"
+             style="background-image: url('{{ url_for('static', filename='img/bienvenida/arco-' ~ foto ~ '.png') }}')"></div>
+      {% endfor %}
     </div>
     <div class="cv-hello">
       <h1>¡Hola! <span aria-hidden="true">👋</span></h1>

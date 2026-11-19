@@ -1,13 +1,30 @@
-{# Pinceladas rosa y amarilla de los mockups, dibujadas como SVG con un filtro de textura. #}
+{# Pinceladas rosa y amarilla de los mockups: entran desde los bordes, tienen cerdas y se desvanecen. #}
 <svg class="cv-brushes" viewBox="0 0 1440 810" preserveAspectRatio="none" aria-hidden="true">
   <defs>
     <filter id="cvBrush" x="-10%" y="-10%" width="120%" height="120%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.9 0.04" numOctaves="2" seed="4" result="ruido"/>
-      <feDisplacementMap in="SourceGraphic" in2="ruido" scale="18"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.008 0.12" numOctaves="2" seed="7" result="ruido"/>
+      <feDisplacementMap in="SourceGraphic" in2="ruido" scale="9"/>
     </filter>
+    <path id="cvTrazoRosa" d="M -80 175 C 160 150, 350 270, 455 560"/>
+    <path id="cvTrazoAmarillo" d="M 1520 175 C 1280 150, 1090 270, 985 560"/>
+    <linearGradient id="cvFinRosa" gradientUnits="userSpaceOnUse" x1="0" y1="160" x2="470" y2="590">
+      <stop offset=".55" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="cvFinAmarillo" gradientUnits="userSpaceOnUse" x1="1440" y1="160" x2="970" y2="590">
+      <stop offset=".55" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <mask id="cvMascaraRosa"><rect width="1440" height="810" fill="url(#cvFinRosa)"/></mask>
+    <mask id="cvMascaraAmarillo"><rect width="1440" height="810" fill="url(#cvFinAmarillo)"/></mask>
   </defs>
-  <path d="M -40 170 C 180 150, 330 260, 420 470" stroke="var(--cv-pink)" stroke-width="95"
-        fill="none" stroke-linecap="round" filter="url(#cvBrush)"/>
-  <path d="M 1480 170 C 1260 190, 1110 330, 1040 520" stroke="var(--cv-yellow)" stroke-width="95"
-        fill="none" stroke-linecap="round" filter="url(#cvBrush)"/>
+  {% for color, trazo, mascara, lado in [("var(--cv-pink)", "cvTrazoRosa", "cvMascaraRosa", 1),
+                                         ("var(--cv-yellow)", "cvTrazoAmarillo", "cvMascaraAmarillo", -1)] %}
+    <g fill="none" stroke="{{ color }}" stroke-linecap="round" filter="url(#cvBrush)" mask="url(#{{ mascara }})">
+      <use href="#{{ trazo }}" stroke-width="118"/>
+      {# cerdas: trazos finos que se salen del borde de la pincelada #}
+      {% for dy, ancho, opacidad in [(-74, 5, 0.8), (-84, 3, 0.55), (-95, 2, 0.35), (70, 6, 0.75), (82, 3, 0.5), (92, 2, 0.3)] %}
+        <use href="#{{ trazo }}" stroke-width="{{ ancho }}" stroke-opacity="{{ opacidad }}"
+             transform="translate({{ lado * dy * -0.35 }} {{ dy * 0.9 }})"/>
+      {% endfor %}
+    </g>
+  {% endfor %}
 </svg>

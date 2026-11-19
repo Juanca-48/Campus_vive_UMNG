@@ -7,7 +7,7 @@
 <a class="cv-link d-inline-block mb-3" href="{{ url_for('admin.actividades') }}"><i class="bi bi-arrow-left"></i> Volver a actividades</a>
 <h2 class="h5 mb-3">{{ "Editar «" ~ actividad.nombre ~ "»" if actividad.id else "Nueva actividad" }}</h2>
 
-<form method="post" class="cv-card p-4">
+<form method="post" enctype="multipart/form-data" class="cv-card p-4">
   <div class="row g-3">
     <div class="col-md-8">
       <label class="form-label" for="nombre">Nombre *</label>
@@ -31,9 +31,33 @@
       <textarea class="form-control cv-input" id="detalle" name="detalle" rows="3">{{ v('detalle') }}</textarea>
     </div>
     <div class="col-md-6">
-      <label class="form-label" for="horario">Horario <small class="cv-muted">(una franja por línea)</small></label>
-      <textarea class="form-control cv-input" id="horario" name="horario" rows="3"
-                placeholder="Lunes 4:00 p.m. – 6:00 p.m.">{{ v('horario') }}</textarea>
+      {% set dias_sel, desde_sel, hasta_sel = horario %}
+      <fieldset>
+        <legend class="form-label fs-6 mb-2">Días</legend>
+        <div class="cv-dias">
+          {% for d in dias %}
+            <label class="cv-dia">
+              <input type="checkbox" name="dias" value="{{ d }}" class="visually-hidden" {{ 'checked' if d in dias_sel }}>
+              <span>{{ d[:3] }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </fieldset>
+      <div class="row g-2 mt-1">
+        {% for campo, texto, valor in [("desde", "Desde", desde_sel), ("hasta", "Hasta", hasta_sel)] %}
+          <div class="col-6">
+            <label class="form-label" for="{{ campo }}">{{ texto }}</label>
+            <select class="form-select cv-input" id="{{ campo }}" name="{{ campo }}">
+              <option value="">—</option>
+              {% for h in horas %}<option value="{{ h }}" {{ 'selected' if h == valor }}>{{ hora_texto(h) }}</option>{% endfor %}
+            </select>
+          </div>
+        {% endfor %}
+      </div>
+      {% if horario_libre %}
+        <small class="cv-muted d-block mt-2"><i class="bi bi-info-circle"></i> Horario actual:
+          <strong>{{ horario_libre.splitlines()|join(" · ") }}</strong> — se conserva mientras no elijas días.</small>
+      {% endif %}
     </div>
     <div class="col-md-6">
       <label class="form-label" for="responsable">Responsable</label>
@@ -51,19 +75,46 @@
       <label class="form-label" for="sede">Sede</label>
       <input class="form-control cv-input" id="sede" name="sede" maxlength="60" value="{{ v('sede', 'Calle 100') }}">
     </div>
-    <div class="col-md-4">
-      <label class="form-label" for="nivel">Nivel</label>
-      <select class="form-select cv-input" id="nivel" name="nivel">
-        {% for n in niveles %}<option {{ 'selected' if v('nivel') == n }}>{{ n }}</option>{% endfor %}
-      </select>
+    <div class="col-12">
+      <span class="form-label d-block" id="mapaAyuda">Ubicación en el mapa
+        <small class="cv-muted">· haz clic sobre la foto del campus para marcar el lugar</small></span>
+      <div class="cv-mapa cv-mapa--editable" id="mapaAdmin" aria-describedby="mapaAyuda">
+        <img src="{{ url_for('static', filename='img/mapas/campus_general.jpg') }}" alt="Mapa del campus Calle 100"
+             class="img-fluid rounded-3">
+        <i class="bi bi-geo-alt-fill cv-mapa-pin" id="pinAdmin" aria-hidden="true" {{ 'hidden' if not punto }}
+           style="left: {{ punto[0] if punto else 0 }}%; top: {{ punto[1] if punto else 0 }}%"></i>
+      </div>
+      <input type="hidden" name="mapa_x" id="mapa_x" value="{{ punto[0] if punto }}">
+      <input type="hidden" name="mapa_y" id="mapa_y" value="{{ punto[1] if punto }}">
+      <small class="cv-muted" id="mapaEstado">{{ "Punto marcado." if punto else "Aún sin ubicar: los estudiantes verán el campus sin marcador." }}</small>
     </div>
-    <div class="col-md-4">
+    <div class="col-12">
+      <label class="form-label" for="foto">Foto <small class="cv-muted">(opcional · JPG, PNG o WEBP, máx. 2 MB)</small></label>
+      <div class="d-flex flex-wrap align-items-center gap-3">
+        {% if foto_actual %}
+          <img src="{{ url_for('static', filename='img/actividades/' ~ foto_actual) }}" alt="Foto actual"
+               class="cv-foto-actual">
+        {% endif %}
+        <div class="flex-grow-1">
+          <input class="form-control cv-input" type="file" id="foto" name="foto" accept="image/jpeg,image/png,image/webp">
+          {% if actividad.imagen %}
+            <div class="form-check mt-2">
+              <input class="form-check-input" type="checkbox" id="quitar_foto" name="quitar_foto">
+              <label class="form-check-label" for="quitar_foto">Quitar la foto subida</label>
+            </div>
+          {% elif not foto_actual %}
+            <small class="cv-muted">Sin foto, la tarjeta muestra el color e icono de la categoría.</small>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
       <label class="form-label" for="etiqueta">Etiqueta</label>
       <select class="form-select cv-input" id="etiqueta" name="etiqueta">
         {% for e in etiquetas %}<option value="{{ e }}" {{ 'selected' if v('etiqueta') == e }}>{{ e or "Ninguna" }}</option>{% endfor %}
       </select>
     </div>
-    <div class="col-md-4 d-flex align-items-end">
+    <div class="col-md-6 d-flex align-items-end">
       <div class="form-check">
         <input class="form-check-input" type="checkbox" id="destacada" name="destacada"
                {{ 'checked' if ('destacada' in form if form else actividad.destacada) }}>
@@ -76,4 +127,22 @@
     <a class="btn btn-outline-light" href="{{ url_for('admin.actividades') }}">Cancelar</a>
   </div>
 </form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Clic en la foto: guarda el punto en % (así no depende del tamaño de pantalla) y mueve el marcador.
+  document.getElementById("mapaAdmin").addEventListener("click", (e) => {
+    const caja = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - caja.left) / caja.width * 100).toFixed(1);
+    const y = ((e.clientY - caja.top) / caja.height * 100).toFixed(1);
+    const pin = document.getElementById("pinAdmin");
+    pin.hidden = false;
+    pin.style.left = x + "%";
+    pin.style.top = y + "%";
+    document.getElementById("mapa_x").value = x;
+    document.getElementById("mapa_y").value = y;
+    document.getElementById("mapaEstado").textContent = "Punto marcado. Recuerda guardar.";
+  });
+</script>
 {% endblock %}

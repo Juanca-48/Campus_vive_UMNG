@@ -4,9 +4,11 @@ import csv
 import io
 import re
 import unicodedata
+import uuid
 from datetime import date, time
 
-from flask import Blueprint, Response, abort, flash, redirect, render_template, request, url_for
+from flask import (Blueprint, Response, abort, current_app, flash, redirect, render_template, request,
+                   url_for)
 
 from app.extensions import db
 from app.models import (ESTADO_APROBADA, ESTADO_PENDIENTE, ESTADO_RECHAZADA, ROL_ESTUDIANTE,
@@ -17,8 +19,10 @@ from app.services import catalogo, sesion
 bp = Blueprint("admin", __name__)
 
 ACCIONES = {"aprobar": ESTADO_APROBADA, "rechazar": ESTADO_RECHAZADA, "pendiente": ESTADO_PENDIENTE}
-NIVELES = ["Todos los niveles", "Principiante", "Intermedio", "Avanzado"]
 ETIQUETAS = ["", "Popular", "Nuevo"]
+DIAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+HORAS = [f"{h:02d}:{m:02d}" for h in range(6, 23) for m in (0, 30)][:-1]  # 06:00 … 22:00
+FOTO_MAX = 2 * 1024 * 1024
 
 
 @bp.before_request
@@ -167,6 +171,78 @@ def actividades():
     return render_template("admin/actividades.html", actividades=catalogo.get_actividades())
 
 
+# --- horario: se guarda como texto, una franja por línea ("Lunes 4:00 p.m. – 6:00 p.m.") -----------
+
+_FRANJA = re.compile(r"^(\S+) (\d{1,2}):(\d{2}) (a\.m\.|p\.m\.|m\.) – (\d{1,2}):(\d{2}) (a\.m\.|p\.m\.|m\.)$")
+
+
+def _hora_texto(hhmm):
+    """'16:00' -> '4:00 p.m.'; el mediodía se escribe '12:00 m.' como en los datos de ejemplo."""
+    h, m = map(int, hhmm.split(":"))
+    sufijo = "m." if (h, m) == (12, 0) else ("a.m." if h < 12 else "p.m.")
+    return f"{(h % 12) or 12}:{m:02d} {sufijo}"
+
+
+def _hora_24(h, m, sufijo):
+    return f"{int(h) % 12 + (0 if sufijo == 'a.m.' else 12):02d}:{m}"
+
+
+def _leer_horario(texto):
+    """(días, desde, hasta) si el horario cabe en los selectores (mismas horas todos los días);
+    None si no (texto libre o rangos distintos), para no reescribirlo sin querer."""
+    dias, rangos = [], set()
+    for linea in filter(None, (l.strip() for l in (texto or "").splitlines())):
+        m = _FRANJA.match(linea)
+        if not m or m[1] not in DIAS:
+            return None
+        dias.append(m[1])
+        rangos.add((_hora_24(m[2], m[3], m[4]), _hora_24(m[5], m[6], m[7])))
+    if not rangos:
+        return ([], "", "")
+    rango = rangos.pop()
+    return (dias, *rango) if not rangos and set(rango) <= set(HORAS) else None
+
+
+def _horario_del_form(actividad, errores):
+    """Texto del horario según los selectores; None = conservar el actual."""
+    f = request.form
+    dias = [d for d in DIAS if d in f.getlist("dias")]
+    desde, hasta = f.get("desde", ""), f.get("hasta", "")
+    if not dias:
+        # Sin días: si el horario actual era editable con los selectores, se vacía; si era texto libre, se conserva.
+        return "" if _leer_horario(actividad.horario) is not None else None
+    if desde not in HORAS or hasta not in HORAS or hasta <= desde:
+        errores.append("Elige el horario: la hora de fin debe ser posterior a la de inicio.")
+        return None
+    return "\n".join(f"{d} {_hora_texto(desde)} – {_hora_texto(hasta)}" for d in dias)
+
+
+# --- foto opcional ------------------------------------------------------------------------------
+
+def _leer_foto(errores):
+    """Bytes y extensión de la foto subida (o None). El tipo se mira en el contenido, no en el nombre."""
+    archivo = request.files.get("foto")
+    if not archivo or not archivo.filename:
+        return None
+    datos = archivo.read(FOTO_MAX + 1)
+    if len(datos) > FOTO_MAX:
+        errores.append("La foto pesa más de 2 MB; redúcela antes de subirla.")
+        return None
+    if datos.startswith(b"\xff\xd8\xff"):
+        return datos, "jpg"
+    if datos.startswith(b"\x89PNG\r\n\x1a\n"):
+        return datos, "png"
+    if datos[:4] == b"RIFF" and datos[8:12] == b"WEBP":
+        return datos, "webp"
+    errores.append("La foto debe ser JPG, PNG o WEBP.")
+    return None
+
+
+def _borrar_foto(nombre):
+    if nombre and nombre.startswith("subidas/"):  # las fotos de ejemplo no se tocan
+        (current_app.config["CARPETA_FOTOS"] / nombre).unlink(missing_ok=True)
+
+
 def _guardar_actividad(actividad):
     """Valida el formulario y copia los datos en `actividad`. Devuelve la lista de errores."""
     f = request.form
@@ -183,6 +259,16 @@ def _guardar_actividad(actividad):
     except ValueError:
         errores.append("Los cupos deben ser un número entre 1 y 1000.")
         cupos = actividad.cupos_total
+    punto = None  # vacío = la actividad aún no tiene lugar en el mapa
+    if f.get("mapa_x") or f.get("mapa_y"):
+        try:
+            punto = (round(float(f["mapa_x"]), 1), round(float(f["mapa_y"]), 1))
+            if not all(0 <= c <= 100 for c in punto):
+                raise ValueError
+        except (KeyError, ValueError):
+            errores.append("El punto del mapa no es válido; vuelve a marcarlo.")
+    horario = _horario_del_form(actividad, errores)
+    foto = _leer_foto(errores)
     if errores:
         return errores
 
@@ -191,9 +277,20 @@ def _guardar_actividad(actividad):
     actividad.categoria = f["categoria"]
     actividad.descripcion = f.get("descripcion", "").strip()[:255]
     actividad.detalle = f.get("detalle", "").strip()
-    actividad.nivel = f.get("nivel") if f.get("nivel") in NIVELES else NIVELES[0]
+    if punto:
+        actividad.mapa_x, actividad.mapa_y = punto
     actividad.cupos_total = cupos
-    actividad.horario = "\n".join(h.strip() for h in f.get("horario", "").splitlines() if h.strip())
+    if horario is not None:
+        actividad.horario = horario
+    if foto:
+        _borrar_foto(actividad.imagen)
+        actividad.imagen = f"subidas/{uuid.uuid4().hex[:16]}.{foto[1]}"
+        destino = current_app.config["CARPETA_FOTOS"] / actividad.imagen
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        destino.write_bytes(foto[0])
+    elif "quitar_foto" in f:
+        _borrar_foto(actividad.imagen)
+        actividad.imagen = None
     actividad.responsable = f.get("responsable", "").strip()
     actividad.lugar = f.get("lugar", "").strip()
     actividad.sede = f.get("sede", "").strip() or "Calle 100"
@@ -217,8 +314,19 @@ def actividad_form(actividad_id=None):
         db.session.rollback()
         for e in errores:
             flash(e, "danger")
-    return render_template("admin/actividad_form.html", actividad=actividad, form=request.form,
-                           niveles=NIVELES, etiquetas=ETIQUETAS)
+    # Punto a mostrar: el recién marcado si el envío falló; si no, el guardado o el de ejemplo.
+    f = request.form
+    punto = (f["mapa_x"], f["mapa_y"]) if f.get("mapa_x") and f.get("mapa_y") else catalogo.punto_mapa(actividad)
+    # Horario a mostrar: lo enviado si falló; si no, el guardado leído en días y horas.
+    if f:
+        horario = (f.getlist("dias"), f.get("desde", ""), f.get("hasta", ""))
+    else:
+        horario = _leer_horario(actividad.horario)
+    return render_template("admin/actividad_form.html", actividad=actividad, form=f,
+                           etiquetas=ETIQUETAS, punto=punto, dias=DIAS, horas=HORAS,
+                           hora_texto=_hora_texto, horario=horario or ([], "", ""),
+                           horario_libre=actividad.horario if _leer_horario(actividad.horario) is None else None,
+                           foto_actual=actividad.imagen or catalogo.FOTOS.get(actividad.id))
 
 
 @bp.route("/actividades/<int:actividad_id>/eliminar", methods=["POST"])
@@ -228,6 +336,7 @@ def actividad_eliminar(actividad_id):
         evento.actividad_id = None  # el evento sigue en el calendario, sin vínculo
     db.session.delete(actividad)  # borra también sus inscripciones
     db.session.commit()
+    _borrar_foto(actividad.imagen)
     flash(f"Actividad «{actividad.nombre}» eliminada junto con sus inscripciones.", "info")
     return redirect(url_for("admin.actividades"))
 
