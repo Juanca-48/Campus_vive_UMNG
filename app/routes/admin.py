@@ -7,8 +7,7 @@ import unicodedata
 import uuid
 from datetime import date, time
 
-from flask import (Blueprint, Response, abort, current_app, flash, redirect, render_template, request,
-                   url_for)
+from flask import Blueprint, Response, abort, flash, redirect, render_template, request, url_for
 
 from app.extensions import db
 from app.models import (ESTADO_APROBADA, ESTADO_PENDIENTE, ESTADO_RECHAZADA, ROL_ESTUDIANTE,
@@ -207,7 +206,7 @@ def _horario_del_form(actividad, errores):
 # --- foto opcional ------------------------------------------------------------------------------
 
 def _leer_foto(errores):
-    """Bytes y extensión de la foto subida (o None). El tipo se mira en el contenido, no en el nombre."""
+    """(bytes, extensión, tipo MIME) de la foto subida, o None. El tipo se mira en el contenido, no en el nombre."""
     archivo = request.files.get("foto")
     if not archivo or not archivo.filename:
         return None
@@ -216,18 +215,13 @@ def _leer_foto(errores):
         errores.append("La foto pesa más de 2 MB; redúcela antes de subirla.")
         return None
     if datos.startswith(b"\xff\xd8\xff"):
-        return datos, "jpg"
+        return datos, "jpg", "image/jpeg"
     if datos.startswith(b"\x89PNG\r\n\x1a\n"):
-        return datos, "png"
+        return datos, "png", "image/png"
     if datos[:4] == b"RIFF" and datos[8:12] == b"WEBP":
-        return datos, "webp"
+        return datos, "webp", "image/webp"
     errores.append("La foto debe ser JPG, PNG o WEBP.")
     return None
-
-
-def _borrar_foto(nombre):
-    if nombre and nombre.startswith("subidas/"):  # las fotos de ejemplo no se tocan
-        (current_app.config["CARPETA_FOTOS"] / nombre).unlink(missing_ok=True)
 
 
 def _guardar_actividad(actividad):
@@ -269,15 +263,11 @@ def _guardar_actividad(actividad):
     actividad.cupos_total = cupos
     if horario is not None:
         actividad.horario = horario
-    if foto:
-        _borrar_foto(actividad.imagen)
-        actividad.imagen = f"subidas/{uuid.uuid4().hex[:16]}.{foto[1]}"
-        destino = current_app.config["CARPETA_FOTOS"] / actividad.imagen
-        destino.parent.mkdir(parents=True, exist_ok=True)
-        destino.write_bytes(foto[0])
+    if foto:  # nombre nuevo en cada subida para que la caché del navegador no muestre la vieja
+        datos, ext, actividad.imagen_tipo = foto
+        actividad.imagen, actividad.imagen_datos = f"{uuid.uuid4().hex[:16]}.{ext}", datos
     elif "quitar_foto" in f:
-        _borrar_foto(actividad.imagen)
-        actividad.imagen = None
+        actividad.imagen = actividad.imagen_tipo = actividad.imagen_datos = None
     actividad.responsable = f.get("responsable", "").strip()
     actividad.lugar = f.get("lugar", "").strip()
     actividad.sede = f.get("sede", "").strip() or "Calle 100"
@@ -313,7 +303,7 @@ def actividad_form(actividad_id=None):
                            etiquetas=ETIQUETAS, punto=punto, dias=DIAS, horas=HORAS,
                            horario=horario or ([], "", ""),
                            horario_libre=actividad.horario if _leer_horario(actividad.horario) is None else None,
-                           foto_actual=actividad.imagen or catalogo.FOTOS.get(actividad.id))
+                           foto_actual=catalogo.url_foto(actividad))
 
 
 @bp.route("/actividades/<int:actividad_id>/eliminar", methods=["POST"])
@@ -323,7 +313,6 @@ def actividad_eliminar(actividad_id):
         evento.actividad_id = None  # el evento sigue en el calendario, sin vínculo
     db.session.delete(actividad)  # borra también sus inscripciones
     db.session.commit()
-    _borrar_foto(actividad.imagen)
     flash(f"Actividad «{actividad.nombre}» eliminada junto con sus inscripciones.", "info")
     return redirect(url_for("admin.actividades"))
 

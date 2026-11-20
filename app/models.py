@@ -4,6 +4,7 @@ Las categorías son fijas (app/data/mock.py) y se guardan por su slug.
 """
 from datetime import datetime, timezone
 
+from sqlalchemy.dialects.mysql import MEDIUMBLOB
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.extensions import db
@@ -88,7 +89,11 @@ class Actividad(db.Model):
     # Punto en img/mapas/campus_general.jpg, en % (izquierda, arriba); lo elige el admin.
     mapa_x = db.Column(db.Float)
     mapa_y = db.Column(db.Float)
-    imagen = db.Column(db.String(255))  # foto subida por el admin, relativa a static/img/actividades/
+    # Foto subida por el admin, guardada en la BD (en Vercel no hay disco). `imagen` es un nombre
+    # nuevo en cada subida, así la URL /foto/<imagen> se puede cachear para siempre.
+    imagen = db.Column(db.String(255))
+    imagen_tipo = db.Column(db.String(20))
+    imagen_datos = db.deferred(db.Column(db.LargeBinary().with_variant(MEDIUMBLOB(), "mysql")))  # hasta 16 MB
     cupos_total = db.Column(db.Integer, nullable=False, default=20)
     horario = db.Column(db.Text, nullable=False, default="")  # una franja por línea
     responsable = db.Column(db.String(120), nullable=False, default="")

@@ -174,7 +174,9 @@ a.cv-avatar:hover, a.cv-avatar.is-active { background: var(--cv-pink); color: #f
 .cv-stage { min-height: 100vh; position: relative; padding: 5.5rem 1rem 6rem; display: flex; flex-direction: column; align-items: center; }
 .cv-stage > .cv-flashes { width: min(100%, 720px); position: relative; z-index: 2; }
 .cv-brushes { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
-main { position: relative; z-index: 1; }  /* el contenido de todas las páginas va sobre las pinceladas */
+main, .cv-footer { position: relative; z-index: 1; }
+.cv-footer { text-align: center; padding: 1rem 0 1.5rem; font-size: .8rem; }
+.cv-footer a { color: var(--cv-muted); }  /* el contenido de todas las páginas va sobre las pinceladas */
 /* En las páginas internas las pinceladas se pegan a los bordes para no quedar bajo textos. */
 body:not(.cv-onboarding) .cv-brushes { left: -30%; width: 160%; }
 /* halo azul para que los textos sueltos se lean si caen sobre una pincelada */

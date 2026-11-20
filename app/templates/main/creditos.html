@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Créditos de fotos{% endblock %}
+
+{% block content %}
+<h1 class="h3 mb-2">Créditos de las fotos</h1>
+<p class="cv-muted mb-4">Las fotos de ejemplo de las actividades son de Wikimedia Commons y se usan bajo
+  su licencia libre. Las fotos de la bienvenida y el mapa son del equipo 4 Frames Startup.</p>
+<div class="cv-card p-0 overflow-hidden">
+  <div class="table-responsive">
+    <table class="table cv-table mb-0 align-middle">
+      <thead><tr><th>Foto</th><th>Autor</th><th>Licencia</th><th>Fuente</th></tr></thead>
+      <tbody>
+        {% for archivo, autor, licencia, fuente in creditos %}
+          <tr>
+            <td><img src="{{ url_for('static', filename='img/actividades/' ~ archivo) }}" alt=""
+                     class="cv-foto-actual" loading="lazy"></td>
+            <td>{{ autor }}</td>
+            <td>{{ licencia }}</td>
+            <td><a class="cv-link" href="{{ fuente }}" target="_blank" rel="noopener">Wikimedia Commons</a></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,8 +1,8 @@
 {# Miniatura de una actividad: usa la foto cuando exista, si no un degradado por categoría. #}
 {% macro thumb(act, alto="140px") %}
   <div class="cv-thumb cv-bg-{{ act.cat.color }}" style="--cv-thumb-h: {{ alto }}">
-    {% if act.imagen %}
-      <img src="{{ url_for('static', filename='img/actividades/' ~ act.imagen) }}" alt="{{ act.nombre }}">
+    {% if act.foto %}
+      <img src="{{ act.foto }}" alt="{{ act.nombre }}" loading="lazy">
     {% else %}
       <i class="bi {{ act.icono }} cv-thumb__icon" aria-hidden="true"></i>
     {% endif %}

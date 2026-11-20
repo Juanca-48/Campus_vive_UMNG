@@ -6,4 +6,5 @@ instance/
 *.db
 docs/
 CLAUDE.md
-app/static/img/actividades/subidas/
+# fotos que antes se guardaban como archivo; ahora van a la BD (se migran solas al arrancar)
+public/static/img/actividades/subidas/

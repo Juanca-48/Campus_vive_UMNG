@@ -4,6 +4,7 @@ Devuelve diccionarios con la forma que usan las plantillas (act.cat,
 act.ubicacion.nombre, act.horario como lista...), así las vistas no dependen
 de los modelos.
 """
+from flask import url_for
 from sqlalchemy import func
 
 from app.data import mock
@@ -29,13 +30,47 @@ PUNTOS_MAPA = {
     10: _FOTO,      # Coro UMNG
 }
 
-# Fotos de ejemplo en static/img/actividades/ (créditos en CREDITOS.md), por id de actividad.
+# Fotos de ejemplo en public/static/img/actividades/, por id de actividad: (archivo, autor, licencia,
+# fuente). Son de Wikimedia Commons; CC BY/BY-SA exigen mostrar el crédito (página /creditos).
 # La que suba el admin (Actividad.imagen) tiene prioridad; sin ninguna se ve el degradado.
+_COMMONS = "https://commons.wikimedia.org/wiki/File:"
 FOTOS = {
-    1: "futbol-umng.jpg", 2: "teatro-en-escena.jpg", 3: "arte-y-color.jpg", 4: "explora-naturaleza.jpg",
-    5: "danza-contemporanea.jpg", 6: "fotografia.jpg", 7: "yoga-y-bienestar.jpg", 8: "guitarra-acustica.jpg",
-    9: "baloncesto.jpg", 10: "coro-umng.jpg",
+    1: ("futbol-umng.jpg", "Lance Cpl. Thor Larson", "Dominio público",
+        _COMMONS + "Island_Warriors_play_friendly_soccer_match_against_Meio_University_140511-M-XX123-402.jpg"),
+    2: ("teatro-en-escena.jpg", "Secretaría de Cultura Ciudad de México", "CC BY-SA 2.0",
+        _COMMONS + "MEX_ED_OBRA_DE_CACHETITO_(20298602945).jpg"),
+    3: ("arte-y-color.jpg", "George", "CC BY-SA 3.0", _COMMONS + "Painting_students_art_league_school.jpg"),
+    4: ("explora-naturaleza.jpg", "tahoesignatureproperties.com", "CC BY-SA 4.0", _COMMONS + "Hiking_Pacific_Trail.jpg"),
+    5: ("danza-contemporanea.jpg", "Nazareth College", "CC BY 2.0",
+        _COMMONS + "Bend_and_Snap,_contemporary_dance_performance_at_Nazareth_College_Arts_Center,"
+                   "_Rochester,_New_York_-_20090925.jpg"),
+    6: ("fotografia.jpg", "褒忠國中 雲端網", "CC BY 2.0",
+        _COMMONS + "Photographer_taking_graduation_photos_for_students_and_teachers_in_Baozhong_Junior_High_School_20130311.jpg"),
+    7: ("yoga-y-bienestar.jpg", "Vuemobi Media", "CC BY-SA 2.0", _COMMONS + "Outdoor_Yoga_At_the_Park.jpg"),
+    8: ("guitarra-acustica.jpg", "Nataev", "CC BY-SA 4.0", _COMMONS + "Close_up_of_an_acoustic_guitar_being_played.jpg"),
+    9: ("baloncesto.jpg", "褒忠國中 雲端網", "CC BY 2.0",
+        _COMMONS + "Boy_dribbling_the_ball_in_a_3x3_basketball_game_in_Baozhong_Junior_High_School_20130327.jpg"),
+    10: ("coro-umng.jpg", "Rrwagner59", "CC BY-SA 4.0", _COMMONS + "Houston_Chamber_Choir_singing_at_the_Villa_de_Matel.jpg"),
 }
+
+
+def url_foto(a):
+    """URL de la foto de la actividad: la subida por el admin, la de ejemplo o None."""
+    if a.imagen:
+        return url_for("main.foto", nombre=a.imagen)
+    if a.id in FOTOS:
+        return url_for("static", filename="img/actividades/" + FOTOS[a.id][0])
+    return None
+
+
+def get_foto(nombre):
+    """(bytes, tipo MIME) de una foto subida, o None."""
+    a = Actividad.query.filter_by(imagen=nombre).first()
+    return (a.imagen_datos, a.imagen_tipo) if a and a.imagen_datos else None
+
+
+def get_creditos():
+    return list(FOTOS.values())
 
 
 def _conteos():
@@ -66,7 +101,7 @@ def _a_dict(a, conteos):
         "miembros": c.get(ESTADO_APROBADA, 0), "pendientes": c.get(ESTADO_PENDIENTE, 0),
         "horario": [h for h in a.horario.splitlines() if h.strip()],
         "responsable": a.responsable, "ubicacion": {"nombre": a.lugar, "sede": a.sede},
-        "punto_mapa": punto_mapa(a), "imagen": a.imagen or FOTOS.get(a.id),
+        "punto_mapa": punto_mapa(a), "foto": url_foto(a),
         "etiqueta": a.etiqueta, "destacada": a.destacada,
     }
 

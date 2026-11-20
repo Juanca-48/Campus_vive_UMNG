@@ -1,14 +1,36 @@
-from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+from flask import Blueprint, abort, flash, make_response, redirect, render_template, request, url_for
 
 from app.services import catalogo, sesion
 
 bp = Blueprint("main", __name__)
 
 
+PUBLICAS = {"main.foto", "main.creditos"}  # la foto se ve también durante la bienvenida
+
+
 @bp.before_request
 def exigir_ingreso():
-    # Todas las vistas del estudiante requieren sesión y el recorrido inicial completo.
-    return sesion.exigir_estudiante_listo()
+    # Las demás vistas del estudiante requieren sesión y el recorrido inicial completo.
+    if request.endpoint not in PUBLICAS:
+        return sesion.exigir_estudiante_listo()
+
+
+@bp.route("/foto/<nombre>")
+def foto(nombre):
+    foto = catalogo.get_foto(nombre)
+    if not foto:
+        abort(404)
+    respuesta = make_response(foto[0])
+    respuesta.mimetype = foto[1]
+    respuesta.cache_control.public = True
+    respuesta.cache_control.max_age = 31536000  # el nombre cambia con cada foto nueva
+    respuesta.cache_control.immutable = True
+    return respuesta
+
+
+@bp.route("/creditos")
+def creditos():
+    return render_template("main/creditos.html", creditos=catalogo.get_creditos())
 
 
 @bp.route("/")

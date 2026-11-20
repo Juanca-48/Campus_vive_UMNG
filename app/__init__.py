@@ -1,10 +1,12 @@
 import re
 from datetime import timedelta, timezone
 
-from flask import Flask, render_template
+from pathlib import Path
+
+from flask import Flask, current_app, flash, redirect, render_template, request
 from sqlalchemy import inspect, text
 
-from config import Config
+from config import Config, revisar_produccion
 from app import models  # noqa: F401  (registra los modelos antes de create_all)
 from app.cli import registrar_comandos
 from app.extensions import db
@@ -12,8 +14,10 @@ from app.services import catalogo, sesion
 
 
 def create_app(config_class=Config):
-    app = Flask(__name__)
+    # Estáticos en public/static: Vercel los sirve desde su CDN; en local los sirve Flask en /static.
+    app = Flask(__name__, static_folder="../public/static")
     app.config.from_object(config_class)
+    revisar_produccion(app)
 
     db.init_app(app)
     with app.app_context():
@@ -61,6 +65,11 @@ def create_app(config_class=Config):
     def no_encontrado(_):
         return render_template("404.html"), 404
 
+    @app.errorhandler(413)
+    def demasiado_grande(_):
+        flash("El archivo es demasiado grande (máximo 2 MB por foto).", "danger")
+        return redirect(request.url)
+
     return app
 
 
@@ -80,8 +89,17 @@ def _agregar_columnas_faltantes():
 # shortcut: arreglos de una sola vez para BD creadas antes del 19-nov-2026; borrar esta función
 # cuando todas las copias del equipo hayan arrancado una vez con esta versión.
 def _migrar_datos_viejos():
-    """Quita la columna nivel (NOT NULL sin valor por defecto en la BD: impediría crear actividades)
-    y pasa los horarios guardados en 12 h ("4:00 p.m.") a 24 h ("16:00")."""
+    """Quita la columna nivel (NOT NULL sin valor por defecto en la BD: impediría crear actividades),
+    pasa los horarios guardados en 12 h ("4:00 p.m.") a 24 h ("16:00") y mete en la BD las fotos que
+    antes se guardaban como archivo en img/actividades/subidas/."""
+    tipos = {".jpg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
+    for actividad in models.Actividad.query.filter(models.Actividad.imagen.like("subidas/%")):
+        archivo = Path(current_app.static_folder, "img", "actividades", actividad.imagen)
+        if archivo.exists() and archivo.suffix in tipos:
+            actividad.imagen, actividad.imagen_tipo = archivo.name, tipos[archivo.suffix]
+            actividad.imagen_datos = archivo.read_bytes()
+        else:
+            actividad.imagen = None
     if "nivel" in {c["name"] for c in inspect(db.engine).get_columns("actividad")}:
         db.session.execute(text("ALTER TABLE actividad DROP COLUMN nivel"))
     for actividad in models.Actividad.query.filter(models.Actividad.horario.contains("m.")):

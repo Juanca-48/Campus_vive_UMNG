@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+instance/
+*.db
+.env
+docs/
+tests/
+CLAUDE.md
+public/static/img/actividades/subidas/

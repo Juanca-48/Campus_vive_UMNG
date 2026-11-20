@@ -101,8 +101,8 @@ python run.py                      # abre http://127.0.0.1:5000
   eventos de ejemplo la primera vez. Cada integrante tiene su propia base local; no se sube al repositorio.
 - Al arrancar, la app agrega a la base las columnas nuevas que falten, así que no hay que borrarla
   cuando cambia el modelo.
-- Las fotos que sube el administrador se guardan en `app/static/img/actividades/subidas/` (fuera
-  del repositorio). Máximo 2 MB por foto; conviene subirlas ya livianas.
+- Las fotos que sube el administrador se guardan en la base de datos (máximo 2 MB por foto;
+  conviene subirlas ya livianas).
 - Los estudiantes se registran desde la pantalla de inicio de sesión.
 - La cuenta de administrador por defecto es `bienestar@unimilitar.edu.co`; para otro correo:
   `flask --app run crear-admin --correo nombre@unimilitar.edu.co`.
@@ -123,7 +123,35 @@ flask --app run crear-admin        # las tablas se crean solas al arrancar
 | Variable | Uso | Por defecto |
 |---|---|---|
 | `DATABASE_URL` | Conexión a la base de datos | SQLite en `instance/` |
-| `SECRET_KEY` | Firma de las sesiones. **Cámbiala al publicar.** | clave de desarrollo |
+| `SECRET_KEY` | Firma de las sesiones. **Obligatoria en Vercel.** | clave de desarrollo |
+
+## Publicar en Vercel
+
+En Vercel el disco es de solo lectura, así que los datos viven en un **MySQL en la nube (Aiven)**.
+Si en Vercel falta `SECRET_KEY` o `DATABASE_URL`, la app no arranca y lo dice en el registro.
+
+1. **Base de datos en Aiven.** Crea un servicio MySQL (plan gratuito). En su página de conexión
+   copia host, puerto, usuario y contraseña, y descarga el **certificado CA**. Guárdalo en el
+   proyecto como `certs/ca.pem` y súbelo al repositorio (es un certificado público, no una clave).
+2. **Arma la `DATABASE_URL`** (la conexión va cifrada con ese certificado):
+   ```
+   mysql+pymysql://USUARIO:CONTRASEÑA@HOST:PUERTO/defaultdb?ssl_ca=certs/ca.pem
+   ```
+3. **Crea las tablas y la cuenta de Bienestar** desde tu PC, apuntando a Aiven:
+   ```powershell
+   $env:DATABASE_URL = "mysql+pymysql://...?ssl_ca=certs/ca.pem"
+   flask --app run crear-admin        # crea tablas, datos de ejemplo y el admin
+   ```
+4. **Proyecto en Vercel.** *Add New → Project*, importa el repositorio de GitHub. Vercel reconoce
+   Flask solo (entrada `index.py`, Python 3.14 por `.python-version`, dependencias de
+   `requirements.txt`). En *Environment Variables* agrega:
+   - `DATABASE_URL`: la del paso 2.
+   - `SECRET_KEY`: una clave larga al azar, por ejemplo la que imprime
+     `python -c "import secrets; print(secrets.token_hex(32))"`.
+5. **Deploy.** Cada `push` a `main` vuelve a publicar.
+
+Los archivos de `public/` (estilos, JS e imágenes) los sirve la CDN de Vercel; Flask los sirve en
+local desde la misma carpeta. `.vercelignore` deja fuera pruebas, documentos y la base local.
 
 ### Pruebas
 
@@ -143,12 +171,14 @@ app/
                    y directorio (datos académicos del estudiante)
   routes/          main (estudiante) · onboarding · auth · admin
   templates/       vistas Jinja2
-  static/          estilos (campus.css), JavaScript e imágenes (mapa, fotos de actividades)
+public/static/     estilos (campus.css), JavaScript e imágenes (mapa, fotos de actividades)
+config.py          configuración y controles para producción
+index.py           entrada para Vercel (run.py es la de uso local)
 tests/             pruebas de flujo
 ```
 
 Las fotos de ejemplo de las actividades son de Wikimedia Commons con licencia libre; autores y
-licencias en `app/static/img/actividades/CREDITOS.md`.
+licencias en la página **Créditos de fotos** (`/creditos`, enlazada al pie de cada página).
 
 ## Estado y próximos pasos
 
@@ -160,10 +190,10 @@ licencias en `app/static/img/actividades/CREDITOS.md`.
 - [x] Mapa del campus con la ubicación de cada actividad
 - [x] Fotos de actividades (de ejemplo y subidas desde el panel)
 - [x] Perfil del estudiante con datos académicos sincronizados (directorio de prueba)
+- [x] Página de créditos de las fotos
+- [x] Listo para Vercel + MySQL en Aiven (conexión cifrada, cookies seguras)
 - [ ] Conectar el directorio real de la universidad
-- [ ] Página de créditos de las fotos al publicar
-- [ ] Protección CSRF en formularios antes del despliegue
-- [ ] Despliegue en la nube con MySQL
+- [ ] Protección CSRF completa con tokens (hoy la cookie `SameSite=Lax` frena los envíos desde otros sitios)
 
 **Fases futuras:** módulo de Apoyo y Desarrollo Estudiantil, notificaciones, analítica de
 participación para Bienestar e integración con sistemas institucionales.

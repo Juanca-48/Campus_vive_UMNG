@@ -1,11 +1,12 @@
 """Pruebas de flujo.  Ejecutar:  python -m unittest discover tests"""
 import io
-import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from sqlalchemy import inspect, text
 
+import config
 from app import _migrar_datos_viejos, create_app
 from app.extensions import db
 from app.models import ROL_ADMIN, Actividad, Evento, Inscripcion, Usuario
@@ -21,8 +22,6 @@ class TestConfig(Config):
 class CampusViveTest(unittest.TestCase):
     def setUp(self):
         self.app = create_app(TestConfig)
-        self.fotos = tempfile.TemporaryDirectory()  # las fotos subidas en pruebas no tocan static/
-        self.app.config["CARPETA_FOTOS"] = Path(self.fotos.name)
         self.ctx = self.app.app_context()
         self.ctx.push()
         admin = Usuario(nombre="Bienestar", correo="admin@unimilitar.edu.co", rol=ROL_ADMIN)
@@ -35,7 +34,6 @@ class CampusViveTest(unittest.TestCase):
         db.session.remove()
         db.drop_all()
         self.ctx.pop()
-        self.fotos.cleanup()
 
     def registrar(self, nombre, correo, onboarding=True):
         self.c.post("/registro", data={"nombre": nombre, "correo": correo,
@@ -192,22 +190,61 @@ class CampusViveTest(unittest.TestCase):
         self.c.post("/admin/actividades/nueva", content_type="multipart/form-data",
                     data={**datos, "foto": (io.BytesIO(b"\xff\xd8\xff" + b"0" * 50), "mi foto.jpg")})
         a = Actividad.query.filter_by(slug="ajedrez").one()
-        self.assertRegex(a.imagen, r"^subidas/[0-9a-f]{16}\.jpg$")
-        primera = Path(self.fotos.name) / a.imagen
-        self.assertTrue(primera.exists())
+        self.assertRegex(a.imagen, r"^[0-9a-f]{16}\.jpg$")
+        primera = a.imagen
+        r = self.c.get(f"/foto/{primera}")  # la foto sale de la BD
+        self.assertEqual((r.status_code, r.mimetype, r.data[:3]), (200, "image/jpeg", b"\xff\xd8\xff"))
+        self.assertIn(f"/foto/{primera}", self.c.get("/actividad/ajedrez").get_data(as_text=True))
 
         self.c.post(f"/admin/actividades/{a.id}/editar", content_type="multipart/form-data",
                     data={**datos, "foto": (io.BytesIO(b"\x89PNG\r\n\x1a\n" + b"0" * 50), "otra.png")})
         db.session.refresh(a)
         self.assertTrue(a.imagen.endswith(".png"))
-        self.assertFalse(primera.exists())  # la foto reemplazada se borra
+        self.assertEqual(self.c.get(f"/foto/{primera}").status_code, 404)  # la reemplazada ya no existe
         self.c.post(f"/admin/actividades/{a.id}/editar", data={**datos, "quitar_foto": "on"})
         db.session.refresh(a)
-        self.assertIsNone(a.imagen)
-        self.assertEqual(list(Path(self.fotos.name, "subidas").iterdir()), [])
+        self.assertIsNone(a.imagen_datos)
         # Sin foto subida, las de ejemplo siguen saliendo.
         self.assertIn("img/actividades/danza-contemporanea.jpg",
                       self.c.get("/admin/actividades/5/editar").get_data(as_text=True))
+
+    def test_foto_y_creditos_se_ven_antes_de_terminar_la_bienvenida(self):
+        a = db.session.get(Actividad, 3)
+        a.imagen, a.imagen_tipo, a.imagen_datos = "abc.png", "image/png", b"\x89PNG"
+        db.session.commit()
+        self.registrar("Ana", "ana@unimilitar.edu.co", onboarding=False)
+        self.login("ana@unimilitar.edu.co")
+        self.assertIn("/foto/abc.png", self.c.get("/bienvenida").get_data(as_text=True))
+        self.assertEqual(self.c.get("/foto/abc.png").status_code, 200)
+        creditos = self.c.get("/creditos").get_data(as_text=True)
+        self.assertIn("Nazareth College", creditos)
+        self.assertIn("CC BY-SA 4.0", creditos)
+
+    def test_foto_vieja_en_archivo_pasa_a_la_bd(self):
+        carpeta = Path(self.app.static_folder, "img", "actividades", "subidas")
+        carpeta.mkdir(exist_ok=True)
+        archivo = carpeta / "prueba-migracion.png"
+        archivo.write_bytes(b"\x89PNG\r\n\x1a\nxyz")
+        try:
+            a = db.session.get(Actividad, 2)
+            a.imagen = "subidas/prueba-migracion.png"
+            db.session.get(Actividad, 4).imagen = "subidas/no-existe.jpg"
+            db.session.commit()
+            _migrar_datos_viejos()
+            self.assertEqual((a.imagen, a.imagen_tipo, a.imagen_datos),
+                             ("prueba-migracion.png", "image/png", b"\x89PNG\r\n\x1a\nxyz"))
+            self.assertIsNone(db.session.get(Actividad, 4).imagen)
+        finally:
+            archivo.unlink()
+
+    def test_en_vercel_exige_clave_y_base_de_datos(self):
+        class SinConfigurar(Config):  # no depende de las variables de entorno de quien corre la prueba
+            SECRET_KEY = config.CLAVE_DESARROLLO
+            SQLALCHEMY_DATABASE_URI = "sqlite:///campus_vive.db"
+
+        with mock.patch.object(config, "EN_VERCEL", True):
+            with self.assertRaisesRegex(RuntimeError, "SECRET_KEY, DATABASE_URL"):
+                create_app(SinConfigurar)
 
     def test_bienvenida_muestra_el_mapa_con_un_marcador_por_lugar(self):
         self.registrar("Ana", "ana@unimilitar.edu.co", onboarding=False)

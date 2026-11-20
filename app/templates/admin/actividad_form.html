@@ -92,7 +92,7 @@
       <label class="form-label" for="foto">Foto <small class="cv-muted">(opcional · JPG, PNG o WEBP, máx. 2 MB)</small></label>
       <div class="d-flex flex-wrap align-items-center gap-3">
         {% if foto_actual %}
-          <img src="{{ url_for('static', filename='img/actividades/' ~ foto_actual) }}" alt="Foto actual"
+          <img src="{{ foto_actual }}" alt="Foto actual"
                class="cv-foto-actual">
         {% endif %}
         <div class="flex-grow-1">
